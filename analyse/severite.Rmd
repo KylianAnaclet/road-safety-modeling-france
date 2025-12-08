@@ -1,0 +1,32 @@
+---
+title: "severité"
+output: html_document
+date: "2025-12-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importation des données
+
+```{r}
+data = read.csv("../data/ONISR-2021.csv")
+#head(data)
+head(class(data$nb_hospitalise))
+```
+
+```{r}
+ncol(data)
+sapply(data, class)
+cat("###########################################")
+non_numeric = colnames(data)[(sapply(data, class) != "integer")*(sapply(data, class) != "numeric") == 1]
+non_numeric
+length(non_numeric)
+```
+
+```{r}
+for (i in non_numeric){
+  data[, i]
+}
+```
