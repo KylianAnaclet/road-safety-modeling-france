@@ -27,6 +27,8 @@ length(non_numeric)
 
 ```{r}
 for (i in non_numeric){
-  data[, i]
+  if (length(table(data[i])) >= 20){
+    print(i)
+  }
 }
 ```
