@@ -12,22 +12,32 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 data = read.csv("../data/ONISR-2021.csv")
-#head(data)
-head(class(data$nb_hospitalise))
+head(data)
+#head(class(data$nb_hospitalise))
 ```
 
 ```{r}
 non_numeric = colnames(data)[(sapply(data, class) != "integer")*(sapply(data, class) != "numeric") == 1]
-non_numeric
+#non_numeric
 ```
 
 ```{r}
+cat("Variables avec >= différentes valeurs\n")
 for (i in non_numeric){
   if (length(table(data[i])) >= 20){
     print(i)
   }
 }
 
+cat("\nVariables avec < différentes valeurs\n")
+for (i in non_numeric){
+  if (length(table(data[i])) < 20){
+    print(i)
+  }
+}
+```
+
+```{r}
 library(dplyr)
 
 # Remplacer les textes par des nombres
@@ -38,11 +48,124 @@ data$lum <- recode(data$lum,
                    "nuit avec eclairage non allume" = 4,
                    "nuit avec eclairage allume" = 5)
 
-# Vérifier
-head(data$lum)
 
+data$agg <- recode(data$agg,
+                   "hors agglo" = 1,
+                   "en agglo" = 2)
+
+data$int <- recode(data$int,
+                   "aucune" = 1,
+                   "en X" = 2,
+                   "en T" = 3,
+                   "en Y" = 4,
+                   "4+ branches" = 5,
+                   "giratoire" = 6,
+                   "place" = 7,
+                   "passage a niveau" = 8,
+                   "autre" = 9)
+
+data$atm <- recode(data$atm,
+                   .missing = -1,
+                   "normale" = 1,
+                   "pluie legere" = 2,
+                   "pluie forte" = 3,
+                   "neige ou grele" = 4,
+                   "brouillard ou fumee" = 5,
+                   "vent fort ou tempete" = 6,
+                   "eblouissant" = 7,
+                   "couvert" = 8,
+                   "autre" = 9
+                   )
+
+data$col <- recode(data$col,
+                   .missing = -1,
+                   "deux veh - frontal" = 1,
+                   "deux veh - arriere" = 2,
+                   "deux veh - cote" = 3,
+                   "3+ veh - en chaine" = 4,
+                   "3+ veh - multiple" = 5,
+                   "autre"  = 6,
+                   "sans" = 7)
+
+data$catr <- recode(data$catr,
+                    "autoroute" = 1,
+                    "nationale" = 2,
+                    "departementale" = 3,
+                    "communale" = 4,
+                    "hors reseau" = 5,
+                    "parc" = 6,
+                    "metropole" = 7,
+                    "autre" = 9)
+
+data$circ <- recode(data$circ,
+                    .missing = -1,
+                    "sens unique" = 1,
+                    "bidirectionnel" = 2,
+                    "chaussee separees" = 3,
+                    "avec voies d'affectation variable" = 4)
+
+data$vosp <- recode(data$vosp,
+                    .missing = -1,
+                    "sans objet" = 0,
+                    "piste cyclable" = 1,
+                    "bande cyclable" = 2,
+                    "voie reservee" = 3)
+
+data$prof <- recode(data$prof,
+                    .missing = -1,
+                    "plat" = 1,
+                    "pente" = 2,
+                    "sommet de cote" = 3,
+                    "base de cote" = 4)
+
+data$plan <- recode(data$plan,
+                    .mising = -1,
+                    "rectiligne"  = 1,
+                    "en courbe a gauche" = 2,
+                    "en courbe a droite" = 3,
+                    "en S" = 4)
+
+data$surf <- recode(data$surf,
+                    .missing = -1,
+                    "normale" = 1,
+                    "mouillee" = 2,
+                    "flaques" = 3,
+                    "inondee" = 4,
+                    "enneigee" = 5,
+                    "boue" = 6,
+                    "verglacee" = 7,
+                    "corps gras" = 8,
+                    "autre" = 9)
+
+data$infra <- recode(data$infra,
+                     .missing = -1,
+                     "aucun" = 0,
+                     "souterrain ou tunnel" = 1,
+                     "pont ou autopont" = 2,
+                     "bretelle ou échangeur" = 3,
+                     "voie ferree" = 4,
+                     "carrefour" = 5,
+                     "zone pietonne" = 6,
+                     "peage"= 7,
+                     "chantier" = 8,
+                     "autres" = 9)
+
+data$situ <- recode(data$situ,
+                    .missing = -1,
+                    "aucun" = 0,
+                    "chaussee" = 1,
+                    "bande arret urgence" = 2,
+                    "accotement" = 3,
+                    "trottoir" = 4,
+                    "piste cyclable" = 5,
+                    "voie speciale" = 6,
+                    "autres" = 8)
 ```
 
 ```{r}
-data$lum
+unique(data$situ)
+```
+
+```{r}
+data[50:150, ]
 ```
