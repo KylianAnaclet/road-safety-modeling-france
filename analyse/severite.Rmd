@@ -45,10 +45,16 @@ df$lum <- recode(df$lum,
                    "plein jour" = 1,
                    "crepuscule ou aube" = 2,
                    "nuit sans eclairage" = 3,
-                   "nuit avec eclairage non allume" = 4,
+                  "nuit avec eclairage non allume" = 4,
                    "nuit avec eclairage allume" = 5)
+```
 
 
+```{r}
+```
+
+
+```{r}
 df$agg <- recode(df$agg,
                    "hors agglo" = 1,
                    "en agglo" = 2)
@@ -176,3 +182,47 @@ head(df[, c("nb_indemne", "nb_blesse", "nb_hospitalise", "nb_tue", "Score_de_sev
 ```{r}
 df[50:150, ]
 ```
+
+```{r}
+```
+
+```{r}
+# 1. Matrice de corrélation (Uniquement variables numériques)
+library(corrplot)
+#df_resultat = df[,c("Num_Acc","nb_tue","nb_hospitalise","nb_blesse","nb_indemne","Score_de_severite")]
+#resultat = df[,setdiff(colnames(df),c("Num_Acc","nb_tue","nb_hospitalise","nb_blesse","nb_indemne","Score_de_severite"))]
+#modele = lm(df_resultat$Score_de_severite~resultat$col)
+#resume = summary(modele)
+#resume 
+```
+
+```{r}
+#modele = lm(df_resultat$Score_de_severite~resultat$col+resultat$catr+resultat$atm+resultat$int+resultat$agg+resultat$situ)
+#resume = summary(modele)
+#resume
+```
+```{r}
+# On s'assure que la VMA est bien numérique (c'est une grandeur physique)
+df$vma <- as.numeric(as.character(df$vma))
+
+# On construit le modèle en précisant 'factor()' pour les variables recodées
+# Cela dit à R : "Ne traite pas 1,2,3 comme des nombres, mais comme des groupes distincts"
+modele_optimise <- lm(Score_de_severite ~ 
+                        factor(vma) +                # Grandeur physique (Linearité OK)
+                        factor(col) +        # Type de choc (Vital)
+                        factor(agg) +        # Localisation (Vital)
+                        factor(catr) +       # Type de route
+                        factor(lum),         # Luminosité (Nuit sans éclairage impacte)
+                      data = df)
+
+
+
+summary(modele_optimise)
+```
+```{r}
+
+
+
+
+```
+
