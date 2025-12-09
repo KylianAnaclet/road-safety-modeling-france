@@ -2,17 +2,16 @@
 df <- read.csv("ONISR-2021.csv")
 head(df)
 ```
+
 ```{r}
 str(df)
 ```
-
 
 ```{r}
 #librairies pour Pipe (%>%) et manimuler des strings
 library(dplyr)
 library(stringr)
 ```
-
 
 ```{r}
 # Coefficients pour le calcul du score de sévérité
@@ -30,12 +29,13 @@ df_clean1 <- df %>%
   # On transforme l'heure en un numeric compris entre 0 et 23
   # en extrayant la première partie de hrmn (heure:min)
   mutate(
-    Heure_Num = as.numeric(str_sub(hrmn, 1, 2))
+    Heure_Num_sin = sin(2*pi*as.numeric(str_sub(hrmn, 1, 2))/24)
   ) %>%
   
   # On garde que les variables intéressantes i.e
   # en enlevant les identifiants (Num_Acc, adr), les variables quasi vides (pr, lartpc..), ou avec trop de catégories (com, dep)
   select(
+    dep,
     Score_Severite,
     Heure_Num,
     lum, agg, int, atm, col, 
@@ -44,19 +44,49 @@ df_clean1 <- df %>%
     nb_velo, nb_moto, nb_voiture, nb_utilitaire, nb_camion, nb_transport
   ) %>%
   
+    
   # On convertit les variables chr en factor pour que r les traitent comme des variables qualitatives
   mutate_if(is.character, as.factor) %>%
   
   # On supprime les lignes avec des valeurs manquantes
   na.omit
-
 ```
 
+Traitement de la localisation de l'accident, pour eviter le maximum de bruit on essaie de prendre juste les régions (13):
 
 ```{r}
+# Structure de regroupement des départements (Entiers) par Région
+regions_map <- list(
+  "Auvergne-Rhône-Alpes"    = c(1, 3, 7, 15, 26, 38, 42, 43, 63, 69, 73, 74),
+  "Hauts-de-France"         = c(2, 59, 60, 62, 80),
+  "PACA"                    = c(4, 5, 6, 13, 83, 84),
+  "Grand Est"               = c(8, 10, 51, 52, 54, 55, 57, 67, 68, 88),
+  "Occitanie"               = c(9, 11, 12, 30, 31, 32, 34, 46, 48, 65, 66, 81, 82),
+  "Normandie"               = c(14, 27, 50, 61, 76),
+  "Nouvelle-Aquitaine"      = c(16, 17, 19, 23, 24, 33, 40, 47, 64, 79, 86, 87),
+  "Centre-Val de Loire"     = c(18, 28, 36, 37, 41, 45),
+  "Corse"                   = c(20), # Remplacement arbitraire de 2A et 2B
+  "Bourgogne-Franche-Comté" = c(21, 25, 39, 58, 70, 71, 89, 90),
+  "Bretagne"                = c(22, 29, 35, 56),
+  "Pays de la Loire"        = c(44, 49, 53, 72, 85),
+  "Île-de-France"           = c(75, 77, 78, 91, 92, 93, 94, 95)
+)
+
+dict_regions <- rep(names(regions_map), lengths(regions_map))
+names(dict_regions) <- unlist(regions_map)
+
+# 2. On applique ce dictionnaire directement sur votre colonne
+# Supposons que votre colonne 'dep' soit propre (ex: 75, 92...)
+df_clean1$Region <- dict_regions[as.character(df_clean1$dep)]
+```
+
+```{r}
+df_final <- df_clean1
 str(df_final)
 ```
+
 Après ce nettoyage, on a perdu seulement environ 4 000 lignes, ce qui est négligeable puisqu'il nous reste 52 000 lignes et nous avons gagné en qualité.
+
 ```{r}
 # R crée des levels pour les variables factor afin de comparer ces levels par rapport à un level de référence (Intercept).
 # Mais initialement R choisit le level de référence par ordre alphabétique, ce qui n'est pas forcément souhaitable 
@@ -66,6 +96,7 @@ Après ce nettoyage, on a perdu seulement environ 4 000 lignes, ce qui est négl
 # Par exemple, R a choisit la référence "aube ou crépuscule" alors qu'on voudrait mieux comparer par rapport à la référence "plein jour"
 levels(df_final$lum)
 ```
+
 ```{r}
 # On affecte le level de référence que l'on souhaite
 df_final$lum <- relevel(df_final$lum, ref = "plein jour", silent=TRUE)
@@ -89,8 +120,8 @@ cat("Référence pour INT :", levels(df_final$int)[1], "\n")
 cat("Référence pour CATR :", levels(df_final$catr)[1], "\n")
 cat("Référence pour SITU :", levels(df_final$situ)[1], "\n")
 ```
-Ainsi, lorsque l'on va calculer la régression, Intercept correspondra au score de sévérité moyen quand tout est à la référence (Plein jour, Météo normale, route plate, etc.)
 
+Ainsi, lorsque l'on va calculer la régression, Intercept correspondra au score de sévérité moyen quand tout est à la référence (Plein jour, Météo normale, route plate, etc.)
 
 ```{r}
 # Modèle de régression: Score de sévérité expliqué par toutes les colonnes
@@ -98,4 +129,3 @@ modele <- lm(Score_Severite ~ ., data = df_final)
 
 summary(modele)
 ```
-

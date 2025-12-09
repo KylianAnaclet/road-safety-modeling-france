@@ -49,10 +49,8 @@ df$lum <- recode(df$lum,
                    "nuit avec eclairage allume" = 5)
 ```
 
-
 ```{r}
 ```
-
 
 ```{r}
 df$agg <- recode(df$agg,
@@ -178,7 +176,6 @@ head(df[, c("nb_indemne", "nb_blesse", "nb_hospitalise", "nb_tue", "Score_de_sev
 ```{r}
 ```
 
-
 ```{r}
 df[50:150, ]
 ```
@@ -201,6 +198,7 @@ library(corrplot)
 #resume = summary(modele)
 #resume
 ```
+
 ```{r}
 # On s'assure que la VMA est bien numérique (c'est une grandeur physique)
 df$vma <- as.numeric(as.character(df$vma))
@@ -219,10 +217,10 @@ modele_optimise <- lm(Score_de_severite ~
 
 summary(modele_optimise)
 ```
+
 ```{r}
 
 
 
 
 ```
-
