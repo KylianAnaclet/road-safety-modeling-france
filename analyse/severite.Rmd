@@ -17,12 +17,8 @@ head(class(data$nb_hospitalise))
 ```
 
 ```{r}
-ncol(data)
-sapply(data, class)
-cat("###########################################")
 non_numeric = colnames(data)[(sapply(data, class) != "integer")*(sapply(data, class) != "numeric") == 1]
 non_numeric
-length(non_numeric)
 ```
 
 ```{r}
@@ -31,4 +27,22 @@ for (i in non_numeric){
     print(i)
   }
 }
+
+library(dplyr)
+
+# Remplacer les textes par des nombres
+data$lum <- recode(data$lum,
+                   "plein jour" = 1,
+                   "crepuscule ou aube" = 2,
+                   "nuit sans eclairage" = 3,
+                   "nuit avec eclairage non allume" = 4,
+                   "nuit avec eclairage allume" = 5)
+
+# Vérifier
+head(data$lum)
+
+```
+
+```{r}
+data$lum
 ```
