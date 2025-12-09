@@ -11,27 +11,27 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Importation des données
 
 ```{r}
-data = read.csv("../data/ONISR-2021.csv")
-head(data)
-#head(class(data$nb_hospitalise))
+df = read.csv("../data/ONISR-2021.csv")
+head(df)
+#head(class(df$nb_hospitalise))
 ```
 
 ```{r}
-non_numeric = colnames(data)[(sapply(data, class) != "integer")*(sapply(data, class) != "numeric") == 1]
+non_numeric = colnames(df)[(sapply(df, class) != "integer")*(sapply(df, class) != "numeric") == 1]
 #non_numeric
 ```
 
 ```{r}
 cat("Variables avec >= différentes valeurs\n")
 for (i in non_numeric){
-  if (length(table(data[i])) >= 20){
+  if (length(table(df[i])) >= 20){
     print(i)
   }
 }
 
 cat("\nVariables avec < différentes valeurs\n")
 for (i in non_numeric){
-  if (length(table(data[i])) < 20){
+  if (length(table(df[i])) < 20){
     print(i)
   }
 }
@@ -41,7 +41,7 @@ for (i in non_numeric){
 library(dplyr)
 
 # Remplacer les textes par des nombres
-data$lum <- recode(data$lum,
+df$lum <- recode(df$lum,
                    "plein jour" = 1,
                    "crepuscule ou aube" = 2,
                    "nuit sans eclairage" = 3,
@@ -49,11 +49,11 @@ data$lum <- recode(data$lum,
                    "nuit avec eclairage allume" = 5)
 
 
-data$agg <- recode(data$agg,
+df$agg <- recode(df$agg,
                    "hors agglo" = 1,
                    "en agglo" = 2)
 
-data$int <- recode(data$int,
+df$int <- recode(df$int,
                    "aucune" = 1,
                    "en X" = 2,
                    "en T" = 3,
@@ -64,7 +64,7 @@ data$int <- recode(data$int,
                    "passage a niveau" = 8,
                    "autre" = 9)
 
-data$atm <- recode(data$atm,
+df$atm <- recode(df$atm,
                    .missing = -1,
                    "normale" = 1,
                    "pluie legere" = 2,
@@ -77,7 +77,7 @@ data$atm <- recode(data$atm,
                    "autre" = 9
                    )
 
-data$col <- recode(data$col,
+df$col <- recode(df$col,
                    .missing = -1,
                    "deux veh - frontal" = 1,
                    "deux veh - arriere" = 2,
@@ -87,7 +87,7 @@ data$col <- recode(data$col,
                    "autre"  = 6,
                    "sans" = 7)
 
-data$catr <- recode(data$catr,
+df$catr <- recode(df$catr,
                     "autoroute" = 1,
                     "nationale" = 2,
                     "departementale" = 3,
@@ -97,35 +97,35 @@ data$catr <- recode(data$catr,
                     "metropole" = 7,
                     "autre" = 9)
 
-data$circ <- recode(data$circ,
+df$circ <- recode(df$circ,
                     .missing = -1,
                     "sens unique" = 1,
                     "bidirectionnel" = 2,
                     "chaussee separees" = 3,
                     "avec voies d'affectation variable" = 4)
 
-data$vosp <- recode(data$vosp,
+df$vosp <- recode(df$vosp,
                     .missing = -1,
                     "sans objet" = 0,
                     "piste cyclable" = 1,
                     "bande cyclable" = 2,
                     "voie reservee" = 3)
 
-data$prof <- recode(data$prof,
+df$prof <- recode(df$prof,
                     .missing = -1,
                     "plat" = 1,
                     "pente" = 2,
                     "sommet de cote" = 3,
                     "base de cote" = 4)
 
-data$plan <- recode(data$plan,
+df$plan <- recode(df$plan,
                     .mising = -1,
                     "rectiligne"  = 1,
                     "en courbe a gauche" = 2,
                     "en courbe a droite" = 3,
                     "en S" = 4)
 
-data$surf <- recode(data$surf,
+df$surf <- recode(df$surf,
                     .missing = -1,
                     "normale" = 1,
                     "mouillee" = 2,
@@ -137,7 +137,7 @@ data$surf <- recode(data$surf,
                     "corps gras" = 8,
                     "autre" = 9)
 
-data$infra <- recode(data$infra,
+df$infra <- recode(df$infra,
                      .missing = -1,
                      "aucun" = 0,
                      "souterrain ou tunnel" = 1,
@@ -150,7 +150,7 @@ data$infra <- recode(data$infra,
                      "chantier" = 8,
                      "autres" = 9)
 
-data$situ <- recode(data$situ,
+df$situ <- recode(df$situ,
                     .missing = -1,
                     "aucun" = 0,
                     "chaussee" = 1,
@@ -163,9 +163,16 @@ data$situ <- recode(data$situ,
 ```
 
 ```{r}
-unique(data$situ)
+df$Score_de_severite <- (1 * df$nb_blesse) +   (7 * df$nb_hospitalise) +  (16 * df$nb_tue)
+# 3. Export et vérification
+write.csv(df, "ONISR-2021_avec_severite.csv", row.names = FALSE)
+head(df[, c("nb_indemne", "nb_blesse", "nb_hospitalise", "nb_tue", "Score_de_severite")])
 ```
 
 ```{r}
-data[50:150, ]
+```
+
+
+```{r}
+df[50:150, ]
 ```
