@@ -1,0 +1,101 @@
+```{r}
+df <- read.csv("ONISR-2021.csv")
+head(df)
+```
+```{r}
+str(df)
+```
+
+
+```{r}
+#librairies pour Pipe (%>%) et manimuler des strings
+library(dplyr)
+library(stringr)
+```
+
+
+```{r}
+# Coefficients pour le calcul du score de sévérité
+a <- 10
+b <- 5
+c <- 1
+
+df_clean1 <- df %>%
+ 
+  # On ajoute la colonne du score de sévérité 
+  mutate(
+    Score_Severite = (nb_tue * a) + (nb_hospitalise * b) + (nb_blesse *c)
+)%>%
+  
+  # On transforme l'heure en un numeric compris entre 0 et 23
+  # en extrayant la première partie de hrmn (heure:min)
+  mutate(
+    Heure_Num = as.numeric(str_sub(hrmn, 1, 2))
+  ) %>%
+  
+  # On garde que les variables intéressantes i.e
+  # en enlevant les identifiants (Num_Acc, adr), les variables quasi vides (pr, lartpc..), ou avec trop de catégories (com, dep)
+  select(
+    Score_Severite,
+    Heure_Num,
+    lum, agg, int, atm, col, 
+    catr, circ, prof, plan, surf, infra, situ, 
+    vma, 
+    nb_velo, nb_moto, nb_voiture, nb_utilitaire, nb_camion, nb_transport
+  ) %>%
+  
+  # On convertit les variables chr en factor pour que r les traitent comme des variables qualitatives
+  mutate_if(is.character, as.factor) %>%
+  
+  # On supprime les lignes avec des valeurs manquantes
+  na.omit
+
+```
+
+
+```{r}
+str(df_final)
+```
+Après ce nettoyage, on a perdu seulement environ 4 000 lignes, ce qui est négligeable puisqu'il nous reste 52 000 lignes et nous avons gagné en qualité.
+```{r}
+# R crée des levels pour les variables factor afin de comparer ces levels par rapport à un level de référence (Intercept).
+# Mais initialement R choisit le level de référence par ordre alphabétique, ce qui n'est pas forcément souhaitable 
+```
+
+```{r}
+# Par exemple, R a choisit la référence "aube ou crépuscule" alors qu'on voudrait mieux comparer par rapport à la référence "plein jour"
+levels(df_final$lum)
+```
+```{r}
+# On affecte le level de référence que l'on souhaite
+df_final$lum <- relevel(df_final$lum, ref = "plein jour", silent=TRUE)
+df_final$atm <- relevel(df_final$atm, ref = "normale", silent=TRUE)
+df_final$prof <- relevel(df_final$prof, ref = "plat", silent=TRUE)
+df_final$plan <- relevel(df_final$plan, ref = "rectiligne", silent=TRUE)
+df_final$surf <- relevel(df_final$surf, ref = "normale", silent=TRUE)
+df_final$int <- relevel(df_final$int, ref = "aucune", silent=TRUE)
+df_final$catr <- relevel(df_final$catr, ref = "departementale", silent=TRUE)
+df_final$situ <- relevel(df_final$situ, ref = "chaussee", silent=TRUE)
+```
+
+```{r}
+# Vérifions 
+cat("Référence pour LUM :", levels(df_final$lum)[1], "\n")
+cat("Référence pour ATM :", levels(df_final$atm)[1], "\n")
+cat("Référence pour PROF :", levels(df_final$prof)[1], "\n")
+cat("Référence pour PLAN :", levels(df_final$plan)[1], "\n")
+cat("Référence pour SURF :", levels(df_final$surf)[1], "\n")
+cat("Référence pour INT :", levels(df_final$int)[1], "\n")
+cat("Référence pour CATR :", levels(df_final$catr)[1], "\n")
+cat("Référence pour SITU :", levels(df_final$situ)[1], "\n")
+```
+Ainsi, lorsque l'on va calculer la régression, Intercept correspondra au score de sévérité moyen quand tout est à la référence (Plein jour, Météo normale, route plate, etc.)
+
+
+```{r}
+# Modèle de régression: Score de sévérité expliqué par toutes les colonnes
+modele <- lm(Score_Severite ~ ., data = df_final)
+
+summary(modele)
+```
+
