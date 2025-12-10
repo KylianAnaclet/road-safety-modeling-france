@@ -1,0 +1,75 @@
+---
+title: "fréquence"
+output: html_document
+date: "2025-12-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+df <- read.csv("/user/3/kebairii/Desktop/Projet_maths_appli/equipe_19/data/ONISR-2021.csv")
+```
+
+```{r}
+#==========================================================#
+#Ici, on oublie complètement le score de sévérité, on s'intéresse uniquement à la fréquence des accidents : enfaite on se demande si à tel endroit, est-ce-que l'endroit est dangereux ? est-ce-qu'il y a souvent des accidents ici ?
+#Donc au Nb_accident() ; le sujet nous demande de tester modèle binomial ou Poisson 
+#Ici je vais commencer par Poisson 
+
+library(dplyr)
+# ON AGREGE : On passe de l'échelle "Accident" à l'échelle "Département"
+df_frequence <- df %>%
+  group_by(dep) %>%  # On regroupe tout par département
+  summarise(
+    # VOICI TA NOUVELLE VARIABLE Y (Celle que tu vas prédire)
+    Nb_Accidents = n(),
+    
+    #Ici, on définit les variables X (Variables explicatives moyennes)
+    # Meteo 
+    Part_Pluie = mean(atm == "pluie forte" | atm == "pluie legere", na.rm = TRUE),
+    
+    # Infrastructure (catr)
+    Part_Autoroute = mean(catr == "autoroute", na.rm = TRUE),
+    Part_Departementale = mean(catr == "departementale", na.rm = TRUE),
+    
+    #Urbanisation
+    Part_Hors_Agglo = mean(agg == "hors agglo", na.rm = TRUE),
+    
+    #Géographie : (intersection, priorité à droite,...)
+    Part_Virage = mean(plan != "rectiligne", na.rm = TRUE),
+    
+    # Comportement, vitesse (vma)
+    VMA_Moyenne = mean(as.numeric(vma), na.rm = TRUE),
+
+    
+    #Gravité de l'accident 
+    Taux_Mortalite = mean(nb_tue > 0, na.rm = TRUE)
+  )
+head(df_frequence)
+```
+
+```{r}
+
+```
