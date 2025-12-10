@@ -1,0 +1,71 @@
+---
+title: "clustering"
+output: html_document
+date: "2025-12-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## A. Charger, importer, observer un tableau de données
+
+```{r}
+df = read.csv('donnees_regroupees.csv')
+classes_colonne = sapply(df, class)
+df_non_integer = df[, classes_colonne != "integer"]
+colnames(df_non_integer)
+```
+
+## B. Nettoyage des données
+
+```{r}
+variables_qualitatives = colnames(df_non_integer)
+# On supprime les lignes avec NA dans les variables qualitatives
+donnees_sans_na = df %>% na.omit(select(variables_qualitatives))
+
+# On transforme mes qualitatives en factors
+donnees_sans_na[, variables_qualitatives] = lapply(donnees_sans_na[, variables_qualitatives], as.factor)
+
+# One-hot encoding avec model.matrix()
+dummies = model.matrix(as.formula(paste("~", paste(variables_qualitatives, collapse = "+"), "-1")), data = donnees_sans_na)
+
+data_final = cbind(donnees_sans_na[, setdiff(names(donnees_sans_na), variables_qualitatives)], dummies)
+
+# Décommentez la ligne suivant si vous voulez générer le fichier csv
+# write.csv(data_final, "../data/data_sans_na_one_hot_encoded.csv", row.names = FALSE)
+```
+
+Une fois que les données regroupées et nettoyées, nous pouvons commencer à implémenter l'algorithme des k-moyennes.
+
+## C. Normalisation des données
+
+```{r}
+data_final = scale(data_final)
+
+# Pour vérifier si les données sont bien normalisées 
+# round(colMeans(data_final), 5)
+# apply(data_final, 2, var)
+```
+
+## D. Implémentation de l'algorithme des k-moyennes
+
+```{r}
+for (k in 1:6) {
+  cat("\n K =", k, "\n")
+  set.seed(123)
+  result = kmeans(data_final, centers = k, nstart = 50)
+  
+  # Le nombre d'accident dans chaque partition
+  print(table(result$cluster))
+  
+  profils = data
+}
+
+```
+
+```{r}
+K = 1
+  cat("\n K =", K, "\n")
+
+```
