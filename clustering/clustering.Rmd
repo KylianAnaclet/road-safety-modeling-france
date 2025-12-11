@@ -60,8 +60,7 @@ echantillon = data_final[sample(nrow(data_final), 15000), ]
 fviz_nbclust(echantillon, kmeans, method = "wss") + geom_vline(xintercept = 4, linetype = 2)
 ```
 
-Le graphique représente l’inertie intra-cluster totale. Celle-ci diminue fortement jusqu’à k = 4, puis beaucoup plus lentement par la suite.
-Le coude est nettement visible à k = 4, ce qui indique que l’ajout de clusters supplémentaires n’apporte qu’un gain marginal.
+Le graphique représente l’inertie intra-cluster totale. Celle-ci diminue fortement jusqu’à k = 4, puis beaucoup plus lentement par la suite. Le coude est nettement visible à k = 4, ce qui indique que l’ajout de clusters supplémentaires n’apporte qu’un gain marginal.
 
 Pour ces raisons, le nombre de clusters retenu est k = 4. Ce choix permet d’obtenir des groupes suffisamment distincts et interprétables tout en évitant une segmentation excessive des données.
 
@@ -82,11 +81,43 @@ Comme les données sont très nombreuses, il est difficile de voir clairement le
 #  ellipse.type = "euclid",   # Confidence/concentration ellipse
 #  star.plot = TRUE,          # Segments from centroid to points
 #  repel = TRUE,              # Avoid overlapping labels
-#  ggtheme = theme_minimal()
-#)
-
-
+#  ggtheme = theme_min
 ```
 
-```         
+## D. Implémentation de l'algorithme des k-Medoides
+
+A l'inverse de la methode des K-Means les centroides font partie de la distribution. Cela permet de mieux prendre en considération les valeurs êxtremes.
+
+### D.1 Recherche de la constante K
+
+On utilise la méthode de silhouette qui permet d'estimer la qualité du clusturing à l'aide de la mesure du paramétre s(i) pour chaque i-éme point défini par :
+
+$$
+s(i)= \frac{a_i-b_i}{max(a_i,b_i)}
+$$
+
+ou • ai : est la moyenne de la distance de x_i au reste de points de sa catégorie
+
+• b_i : ai : est la moyenne de la distance de x_i aux points de la catégorie la plus proche de x_i
+
+```{r}
+library(cluster)
+library(factoextra)
+fviz_nbclust(df_final, pam, method = "silhouette")+
+theme_classic()
 ```
+
+```{r}
+# On applique l'algo de K-Medoids avec le k obtenu en haut :
+k <- 
+pam.res <- pam(df_final, k)
+print(pam.res)
+```
+
+```{r}
+# On ajoute le résultat du clusturing au df 
+dd <- cbind(df_final, cluster = pam.res$cluster)
+head(dd, n = 3)
+```
+
+On peut visualiser le résultat du clusturing à l'aide de la réduction de dimensions :
