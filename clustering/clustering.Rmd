@@ -8,14 +8,30 @@ date: "2025-12-10"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## A. Charger, importer, observer un tableau de données
+## A. Préparation des données
 
 ```{r}
-df = read.csv('donnees_regroupees.csv')
-classes_colonne = sapply(df, class)
-df_non_integer = df[, classes_colonne != "integer"]
-#colnames(df_non_integer)
+df <- read.csv('accidents_db_final_clusturing.csv') 
+df <- na.omit(df)
+
 ```
+
+Identifier les variables de type character et les convertir en facteurs.
+
+```{r}
+data_fac <- df
+char_cols = sapply(df, is.character)
+
+for (i in 1:length(char_cols)) {
+  if (char_cols[i]) {
+    data_fac[[i]] <- as.factor(data[[i]])
+  }
+}
+```
+
+Comme le jeu de données contient à la fois des variables numériques et des variables catégorielles (notamment la région, la condition d’éclairage, la condition atmosphérique, etc.), l'algorithme K-means classique n'est pas le plus adapté. En effet, K-means repose sur la distance euclidienne, qui perd son sens avec des variables catégorielles, même après un encodage one-hot.
+
+Il est préférable d'utiliser K-prototypes. Cet algorithme combine la distance euclidienne pour les variables numériques et une mesure de dissimilarité adaptée aux variables catégorielles. Il permet ainsi d'obtenir des clusters plus fiable et plus facile à interpréter.
 
 ## B. Nettoyage des données
 
@@ -56,7 +72,7 @@ data_final = scale(data_final)
 ```{r}
 #install.packages("factoextra")
 library(factoextra)
-echantillon = data_final[sample(nrow(data_final), 15000), ]
+echantillon = data_final[sample(nrow(data_final), 10000), ]
 fviz_nbclust(echantillon, kmeans, method = "wss") + geom_vline(xintercept = 4, linetype = 2)
 ```
 
@@ -64,14 +80,14 @@ Le graphique représente l’inertie intra-cluster totale. Celle-ci diminue fort
 
 Pour ces raisons, le nombre de clusters retenu est k = 4. Ce choix permet d’obtenir des groupes suffisamment distincts et interprétables tout en évitant une segmentation excessive des données.
 
-## Visualisation des clusters k-means
+## E. Visualisation des clusters k-means
 
 Comme les données sont très nombreuses, il est difficile de voir clairement les clusters.
 
 ```{r}
 
 #set.seed(123)
-#echantillon_clean <- echantillon[, apply(echantillon, 2, var) > 0]
+echantillon_clean <- echantillon[, apply(echantillon, 2, var) > 0]
 
 #km.res = kmeans(echantillon_clean, 4, nstart = 25)
 #fviz_cluster(
@@ -105,6 +121,55 @@ library(cluster)
 library(factoextra)
 fviz_nbclust(df_final, pam, method = "silhouette")+
 theme_classic()
+km.res = kmeans(echantillon_clean, 4, nstart = 25)
+fviz_cluster(
+  km.res,
+  data = echantillon_clean,
+  palette = c("blue", "green", "red", "lightblue"),
+  ellipse.type = "euclid",   # Confidence/concentration ellipse
+  star.plot = TRUE,          # Segments from centroid to points
+  repel = TRUE,              # Avoid overlapping labels
+  ggtheme = theme_minimal()
+)
+```
+
+## F. Implémentation de l'algorithme des k-medoids
+
+```{r}
+# On utilise data_final étant normalisé
+# install.packages("cluster")
+library(cluster)
+library(factoextra)
+
+fviz_nbclust(echantillon, pam, method = "silhouette")+theme_classic()
+```
+
+## G. CLARA - Clustering Large Applications
+
+```{r}
+library(cluster)
+library(factoextra)
+fviz_nbclust(echantillon, clara, method = "silhouette")+theme_classic()
+
+```
+
+Selon le graphique obtenu, le nombre optimal de groupes est 5. Dans la section suivante, on classifie donc les données en 5 groupes.
+
+Le code R ci-dessous exécue l'algorithme PAM avec k = 5.
+
+```{r}
+clara.res = clara(df, 5, samples = 50, pamLike = TRUE)
+   
+clara.res$medoids
+```
+
+```{r}
+fviz_cluster(clara.res,
+  palette = c("blue", "orange", "pink", "lightgreen", "brown"), # color palette
+  ellipse.type = "t", # Concentration ellipse
+  geom = "point", pointsize = 1,
+  ggtheme = theme_classic()
+  )
 ```
 
 ```{r}
