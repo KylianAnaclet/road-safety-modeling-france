@@ -1,4 +1,3 @@
-
 ```{r}
 df <- read.csv("ONISR-2021.csv")
 head(df)
@@ -70,7 +69,6 @@ get_region <- function(dep_code) {
 }
 ```
 
-
 ```{r}
 # Coefficients pour le calcul du score de sévérité
 a <- 10
@@ -128,7 +126,6 @@ df_final <- df %>%
   # On supprime les lignes avec des valeurs manquantes
   na.omit
 ```
-
 
 ```{r}
 str(df_final)
@@ -189,6 +186,7 @@ plot(modele)
 # On remet la fenêtre graphique normale
 par(mfrow = c(1, 1))
 ```
+
 ```{r}
 # Librairie pour le calcul du VIF (Variance Inflation Factor) (cf Cuthbert Daniel)
 if(!require(car)) install.packages("car")
@@ -200,6 +198,7 @@ vif_values <- vif(modele)
 # Affichage clair
 print(vif_values)
 ```
+
 ```{r}
 # Distribution des résidus
 hist(resid(modele), 
@@ -209,7 +208,4 @@ hist(resid(modele),
      xlab = "Erreur du modèle")
 ```
 
-
-
-```
-
+\`\`\`
