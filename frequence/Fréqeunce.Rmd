@@ -8,28 +8,10 @@ date: "2025-12-10"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## 1) Le CSV pour les fréquences
 
 ```{r}
-df <- read.csv("/user/3/kebairii/Desktop/Projet_maths_appli/equipe_19/data/ONISR-2021.csv")
+df <- read.csv("~/Bureau/equipe_19/data/ONISR-2021.csv")
 ```
 
 ```{r}
@@ -70,6 +52,171 @@ df_frequence <- df %>%
 head(df_frequence)
 ```
 
-```{r}
+## 2) Le CSV pour le nb_population
 
+On a pris les données provenant de l'INSEE 2021 via cette adresse : <https://www.insee.fr/fr/statistiques/7739582?sommaire=7728826>
+
+```{r}
+df_pop_brut <- read.csv("donnees_departements_INSEE_2021.csv", sep = ";", stringsAsFactors = FALSE)
+
+# --- ETAPE 2 : Nettoyage pour la fusion ---
+# On ne garde que ce qui nous intéresse et on renomme pour que ça matche
+df_pop <- df_pop_brut %>%
+  dplyr::select(DEP, PTOT) %>%        # On garde le Code et la Pop Totale
+  rename(dep = DEP, Population = PTOT) %>% # On renomme en 'dep' et 'Population'
+  mutate(dep = as.character(dep))     # Sécurité : On force le format Texte
 ```
+
+## 3) Fusion des deux CSV
+
+On crée un nouveau CSV qui contient toutes les données de base plus une colonne Population
+
+```{r}
+df_modele <- inner_join(df_frequence, df_pop, by = "dep")
+
+# Vérification : Tu dois voir 90+ lignes (France métro + DOM)
+print(paste("Nombre de départements prêts :", nrow(df_modele)))
+head(df_modele)
+# Ici, on voit clairement la différence
+setdiff(names(df_modele), names(df_frequence))
+```
+
+## 4) Tests
+
+Premièrement, on essaye avec une Loi de poisson parce que La loi de Poisson est pertinente pour décrire le nombre d'événements dans d'autres types d'intervalles, spatiaux plutôt que temporels, comme des segments, surfaces ou volumes.
+
+Nb_Accidents agit comme un "compteur"
+
+De plus, on prend en compte l'exposition, d'après une formule qu'on a trouvé sur <https://perso.univ-rennes1.fr/valerie.monbet/GLM/GLMpharma.pdf>, il mentionne notamment (diapo 146/203) la présence d'un offset qui dans notre cas est la population (il nous dit exactement que : "*L’offset est fréquent dans les modèles log-linéaires. Il représente souvent le log d’une mesure d’exposition*"
+
+(Cela explique pourquoi on a rajouté un CSV avec les données de la population en 2021 de l'INSEE
+
+(*PS: le pdf mis ci-dessus nous a été très utile notamment toute la partie sur Régression de Poisson, dans lequel on retrouve notamment des propriétés notamment le calcule de la déviance permettant de mesurer l'écart entre le modèle et l'observation*)
+
+## 4.1) Test pour une loi de Poisson
+
+Avant toute chose, pour utiliser la régression de Poisson :
+
+(On est parti sur les hypothèses de ce site : <https://www.datacamp.com/tutorial/poisson-regression> )
+
+L’offset permet de modéliser un **taux d’accidents par habitant**, et non un nombre brut. Sans offset, les départements très peuplés auraient automatiquement plus d’accidents, ce qui biaiserait complètement le modèle
+
+```{r}
+#Voici notre modèle
+modele_poisson <- glm(Nb_Accidents ~ Part_Pluie + Part_Autoroute + 
+                      Part_Departementale + Part_Hors_Agglo + 
+                      Part_Virage + VMA_Moyenne +
+                      offset(log(Population)), 
+                      family = poisson, 
+                      data = df_modele)
+#summary(modele_poisson)
+```
+
+$$
+D(y, \hat{\mu}) = 2 \sum_{i=1}^n \left[ y_i \ln\left(\frac{y_i}{\hat{\mu}_i}\right) - (y_i - \hat{\mu}_i) \right]
+$$
+
+Voici la formule de la Déviance, où
+
+\- $y_i$ est le nb d'accidents **observé** (Réel) dans le département $i$
+
+\-$\hat{\mu}$ est le nb d'accident **estimé** (Prédit) par le modèle pour un département $i$
+
+\-$n$ est le nb total d'observations
+
+```{r}
+#On récupère la déviance
+Deviance <- deviance(modele_poisson)
+# 2. Extraction des Degrés de Liberté (n - p)
+Df <- df.residual(modele_poisson)
+# 3. Calcul du Ratio de Surdispersion (Phi)
+Phi <- Deviance / Df
+# --- AFFICHAGE ---
+cat("=== DIAGNOSTIC DE LA DÉVIANCE ===\n")
+cat("Déviance Résiduelle (D) :", round(Deviance, 2), "\n")
+cat("Degrés de Liberté (Df)  :", Df, "\n")
+cat("----------------------------------\n")
+cat("Ratio de Dispersion (Phi) :", round(Phi, 4), "\n")
+
+# --- INTERPRÉTATION AUTOMATIQUE POUR TOI ---
+if (Phi > 1.5) {
+  cat("ALERTE : Il y a de la SURDISPERSION (Phi >> 1).\n")
+  cat("Le modèle de Poisson est trop rigide.\n")
+  cat("Conseil : Passe au modèle Binomial Négatif (glm.nb).")
+} else {
+  cat("Tout va bien : Le modèle respecte l'hypothèse de Poisson.")
+}
+```
+
+Ou bien on peut raisonner de la façon suivante : on pose $H_0$ : le modèle permet de reproduire les obs ; $H_1$ le modèle ne permet pas de reproduire les observations
+
+On peut utiliser la statistique de Pearson qui vérifie une loi du Chi2 à n-p degré de liberté
+
+```{r}
+# 1. Calcul de la statistique de Pearson (Ton calcul)
+# Remplace 'modele_poisson' par le vrai nom de ton objet glm
+res_pearson <- sum(residuals(modele_poisson, type = "pearson")^2)
+
+# 2. Degrés de liberté (n - p)
+ddl <- df.residual(modele_poisson)
+
+# 3. Calcul de la p-value (Probabilité que ce soit dû au hasard)
+# lower.tail = FALSE car on veut la p-valeur
+p_value <- pchisq(res_pearson, df = ddl, lower.tail = FALSE)
+
+# 4. Affichage
+print(paste("Statistique de Pearson :", round(res_pearson, 2)))
+print(paste("Degrés de liberté :", ddl))
+print(paste("P-value :", round(p_value,5)))
+
+if(res_pearson / ddl > 1.5) {
+  print("CONCLUSION : Rejet de H0. Le modèle Poisson est invalide (Surdispersion).")
+  print("Il FAUT passer au modèle Binomial Négatif.")
+}
+```
+
+```{r}
+library(ggplot2)
+library(ggrepel) # Pour afficher les noms des départements sans chevauchement
+
+# 1. On ajoute les prédictions au tableau
+df_modele$Prediction_Poisson <- fitted(modele_poisson)
+
+# 2. Le Graphe
+ggplot(df_modele, aes(x = Prediction_Poisson, y = Nb_Accidents)) +
+  geom_point(alpha = 0.6, color = "blue") +
+  
+  # La ligne de perfection (y = x)
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed", size = 1) +
+  
+  # On étiquette les départements où le modèle se plante gravement (> 200 erreurs)
+  geom_text_repel(aes(label = ifelse(abs(Nb_Accidents - Prediction_Poisson) > 200, dep, "")),
+                  box.padding = 0.35, point.padding = 0.5, segment.color = 'grey50') +
+  
+  labs(title = "Diagnostic Poisson : Prédictions vs Réalité",
+       x = "Nb Accident PRÉDIT (Modèle)",
+       y = "Nb Accident RÉEL (Observé)") 
+  theme_minimal()
+```
+
+Est-ce qu'on devrait montrer aussi les résidus ??
+
+```{r}
+library(dplyr)
+
+# 1. On calcule le Taux pour 10 000 habitants
+# (C'est le chiffre qui juge le VRAI risque)
+#df_verif <- df_modele %>%
+  #mutate(Taux_Risque = (Nb_Accidents / Population) * 10000) %>%
+  #arrange(desc(Taux_Risque)) %>% # On trie du plus dangereux au moins dangereux
+  #dplyr::select(dep, Nb_Accidents, Population, Taux_Risque) # On affiche juste l'essentiel
+
+# 2. Affiche-moi le Top 5
+#print(head(df_verif, 5))
+```
+
+Ainsi, on voit que le modèle de Poisson ne prédit pas correctement la fréquence des accidents la défiance étant très élevé le Chi-test étant pas en adéquation avec ce que l'on recherche.
+
+On a donc décidé de continuer la démarche établi par le PDF en utilisant un modèle de Régression binomiale négative
+
+## 4.2) Test pour modèle binomiale négative
