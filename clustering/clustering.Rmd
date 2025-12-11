@@ -8,30 +8,168 @@ date: "2025-12-10"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## A. Préparation des données
+Comme le jeu de données contient à la fois des variables numériques et des variables catégorielles (notamment la région, la condition d’éclairage, la condition atmosphérique, etc.), l'algorithme K-means classique n'est pas le plus adapté. En effet, K-means repose sur la distance euclidienne, qui perd son sens avec des variables catégorielles, même après un encodage one-hot.
+
+Il est préférable d'utiliser K-prototypes. Cet algorithme combine la distance euclidienne pour les variables numériques et une mesure de dissimilarité adaptée aux variables catégorielles. Il permet ainsi d'obtenir des clusters plus fiable et plus facile à interpréter.
+
+## A. Chargement des données
+
+Le jeu de données final étant très volumineux, un échantillon aléatoire a été extrait pour faciliter le traitement et le clustering.
 
 ```{r}
-df <- read.csv('accidents_db_final_clusturing.csv') 
-df <- na.omit(df)
+n_sample <- 1000
+df_avec_var_rep <- read.csv('accidents_db_final_clusturing.csv')
+df_avec_var_rep <- df_avec_var_rep[sample(nrow(df_avec_var_rep), n_sample), ]
 
+df_sans_var_rep <- subset(df_avec_var_rep, select = -c(nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
+df_sans_var_exp <- df_sans_var_exp[sample(nrow(df_sans_var_exp), n_sample), ]
 ```
 
 Identifier les variables de type character et les convertir en facteurs.
 
 ```{r}
-data_fac <- df
-char_cols = sapply(df, is.character)
+variables_categorielles = sapply(df_avec_var_rep, is.character)
 
-for (i in 1:length(char_cols)) {
-  if (char_cols[i]) {
-    data_fac[[i]] <- as.factor(data[[i]])
+for (i in 1:length(variables_categorielles)) {
+  if (variables_categorielles[i]) {
+    df_avec_var_rep[[i]] = as.factor(df_avec_var_rep[[i]])
+  }
+}
+
+variables_categorielles = sapply(df_sans_var_exp, is.character)
+
+for (i in 1:length(df_sans_var_exp)) {
+  if (variables_categorielles[i]) {
+    df_sans_var_exp[[i]]= as.factor(df_sans_var_exp[[i]])
   }
 }
 ```
 
-Comme le jeu de données contient à la fois des variables numériques et des variables catégorielles (notamment la région, la condition d’éclairage, la condition atmosphérique, etc.), l'algorithme K-means classique n'est pas le plus adapté. En effet, K-means repose sur la distance euclidienne, qui perd son sens avec des variables catégorielles, même après un encodage one-hot.
+Avant de passer à l'implémentation de l'algorithme de k-prototypes, il faut d'abord :
 
-Il est préférable d'utiliser K-prototypes. Cet algorithme combine la distance euclidienne pour les variables numériques et une mesure de dissimilarité adaptée aux variables catégorielles. Il permet ainsi d'obtenir des clusters plus fiable et plus facile à interpréter.
+-   Vérifier que toutes les variables catégorielles sont bien des facteurs.
+
+-   Vérifier que toutes les variable numériques sont bien des numériques.
+
+-   Traiter les valeurs manquantes (NA) si nécessaire.
+
+```{r}
+str(df_avec_var_rep)
+anyNA(df_avec_var_rep)
+
+str(df_sans_var_exp)
+```
+
+## B. Normalisation des variables numériques
+
+```{r}
+numeric_cols <- sapply(df_avec_var_rep, is.numeric)
+df_avec_var_rep[numeric_cols] <- scale(df_avec_var_rep[numeric_cols])
+
+numeric_cols <- sapply(df_sans_var_rep, is.numeric)
+df_sans_var_exp[numeric_cols] <- scale(df_sans_var_exp[numeric_cols])
+
+```
+
+*Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.*
+
+## C. Choix du nombre de clusters (k)
+
+On applique l'algorithme k-prototypes pour différentes valeurs de k.
+
+```{r}
+set.seed(1)
+#install.packages("clustMixType")
+#install.packages("cluster")
+library(clustMixType)
+library(cluster)
+
+# Pour la méthode de coude
+cost <- numeric()
+
+# Pour la méthode de silhouette
+d <- daisy(df_avec_var_rep, metric = "gower")
+sil_avg <- numeric()
+
+for (k in 2:10) {
+  res <- kproto(df_avec_var_rep, k)
+  cost[k] <- res$tot.withinss
+  
+  sil <- silhouette(res$cluster, d)
+  sil_avg[k] <- mean(sil[, 3])
+}
+
+plot(2:10, cost[2:k], main = "Méthode du coude pour choisir k",type = "b", xlab = "Nombre de clusters (k)", ylab = "Somme des distances")
+
+plot(2:10, sil_avg[2:10], main = "Méthode de la silhouette pour choisir k",type = "b", xlab = "Nombre de clusters (k)", ylab = "Silhouette moyenne")
+```
+
+### Observations
+
+Le graphique de la méthode du coude montre que la courbe se stabilise à **k = 4**, tandis que la silhouette présente deux maxima à **k = 2** et **k = 4**.\
+
+Bien que le pic le plus élevé de la silhouette corresponde à k = 2, nous avons choisi **k = 4** car il est cohérent avec le coude et permet une segmentation plus détaillée des observations.
+
+## D. Application de k-prototypes
+
+```{r}
+set.seed(1)
+library(clustMixType)
+res <- kproto(df_avec_var_rep, k = 4, diss = "gower")
+clusters <- res$cluster
+```
+
+## E. Analyse des résultats
+
+#### Distribution des observations par cluster
+
+```{r}
+table(clusters)
+```
+
+L'analyse des clusters montre que les quatres groupes identifiés présentent des tailles différentes. Le cluster 3 regroupe la majorité des observations, tandis que le cluster 1 correspond a un petit sous-groupe spécifique. Les clusters 2 et 4 occupent des tailles intermédiaires.
+
+Cette répartition révèle l'existence de groupes homogènes mais de taille variées, permettant d'identifier et d'interpéter les profils distincts propres à chaque cluster.
+
+### Moyennes des variables numériques par cluster
+
+```{r}
+aggregate(. ~ clusters, data = df_avec_var_rep, FUN = mean)
+```
+
+### **Répartition des variables catégorielles par cluster**
+
+```{r}
+cat_cols <- sapply(df_avec_var_rep, is.factor)
+
+for (col in names(df_avec_var_rep)[cat_cols]) {
+  cat("\nVariable :", col, "\n")
+  print(table(df_avec_var_rep[[col]], clusters))
+}
+```
+
+## F. Visualisation des clusters k-prototypes
+
+```{r}
+library(factoextra)
+library(viridis)
+
+# Extraire les clusters
+clusters <- res$cluster
+
+# Ne garder que les colonnes numériques
+num_cols <- sapply(df_avec_var_rep, is.numeric)
+df_num <- df_avec_var_rep[, num_cols]
+
+fviz_cluster(list(data = df_num, cluster = clusters),
+             geom = "point",
+             palette = viridis(4), 
+             ellipse.type = "convex",
+             repel = TRUE,
+             show.clust.cent = TRUE,
+             ggtheme = theme_minimal(), 
+             main = "Visualisation des clusters")
+```
 
 ## B. Nettoyage des données
 
