@@ -1,0 +1,332 @@
+---
+title: "fréquence"
+output:
+  pdf_document: default
+  html_document: default
+date: "2025-12-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1) Le CSV pour les fréquences
+
+```{r}
+df <- read.csv("~/Bureau/equipe_19/data/ONISR-2021.csv")
+```
+
+```{r}
+#==========================================================#
+#Ici, on oublie complètement le score de sévérité, on s'intéresse uniquement à la fréquence des accidents : enfaite on se demande si à tel endroit, est-ce-que l'endroit est dangereux ? est-ce-qu'il y a souvent des accidents ici ?
+#Donc au Nb_accident() ; le sujet nous demande de tester modèle binomial ou Poisson 
+#Ici je vais commencer par Poisson 
+library(dplyr)
+# ON AGREGE : On passe de l'échelle "Accident" à l'échelle "Département"
+df_frequence <- df %>%
+  group_by(dep) %>%  # On regroupe tout par département
+  summarise(
+    #NOTRE VARIABLE Y (réponse)
+    Nb_Accidents = n(),
+    #Ici, on définit les variables X (Variables explicatives)
+    # Meteo 
+    Part_Pluie = mean(atm == "pluie forte" | atm == "pluie legere", na.rm = TRUE),
+    # Infrastructure (catr)
+    Part_Autoroute = mean(catr == "autoroute", na.rm = TRUE),
+    Part_Departementale = mean(catr == "departementale", na.rm = TRUE),
+    #Urbanisation
+    Part_Hors_Agglo = mean(agg == "hors agglo", na.rm = TRUE),
+    #Géographie : (intersection, priorité à droite,...)
+    Part_Virage = mean(plan != "rectiligne", na.rm = TRUE),
+  
+    # Comportement, vitesse (vma)
+    VMA_Moyenne = mean(as.numeric(vma), na.rm = TRUE),
+    #Gravité de l'accident 
+    Taux_Mortalite = mean(nb_tue > 0, na.rm = TRUE)
+  )
+head(df_frequence)
+#Récupérer des données autres que la base => car plein de gens qui roulent qui n'ont pas d'accident 
+#Trouver des choses sur l'infrastructure routière sur chacun des départements
+#Regarder catégorie de population par les département (cf; INSEE) => nb_personne dans le département 
+```
+
+## 2) Le CSV pour le nb_population
+
+On a pris les données provenant de l'INSEE 2021 via cette adresse : <https://www.insee.fr/fr/statistiques/7739582?sommaire=7728826>
+
+```{r}
+df_pop_brut <- read.csv("donnees_departements_INSEE_2021.csv", sep = ";", stringsAsFactors = FALSE)
+
+# --- ETAPE 2 : Nettoyage pour la fusion ---
+# On ne garde que ce qui nous intéresse et on renomme pour que ça matche
+df_pop <- df_pop_brut %>%
+  dplyr::select(DEP, PTOT) %>%        # On garde le Code et la Pop Totale
+  rename(dep = DEP, Population = PTOT) %>% # On renomme en 'dep' et 'Population'
+  mutate(dep = as.character(dep))     # Sécurité : On force le format Texte
+```
+
+## 3) Fusion des deux CSV
+
+On crée un nouveau CSV qui contient toutes les données de base plus une colonne Population
+
+```{r}
+df_modele <- inner_join(df_frequence, df_pop, by = "dep")
+
+# Vérification : Tu dois voir 90+ lignes (France métro + DOM)
+print(paste("Nombre de départements prêts :", nrow(df_modele)))
+head(df_modele)
+# Ici, on voit clairement la différence
+setdiff(names(df_modele), names(df_frequence))
+```
+
+## 4) Tests
+
+Premièrement, on essaye avec une Loi de poisson parce que La loi de Poisson est pertinente pour décrire le nombre d'événements dans d'autres types d'intervalles, spatiaux plutôt que temporels, comme des segments, surfaces ou volumes.
+
+Nb_Accidents agit comme un "compteur"
+
+De plus, on prend en compte l'exposition, d'après une formule qu'on a trouvé sur <https://perso.univ-rennes1.fr/valerie.monbet/GLM/GLMpharma.pdf>, il mentionne notamment (diapo 146/203) la présence d'un offset qui dans notre cas est la population (il nous dit exactement que : "*L’offset est fréquent dans les modèles log-linéaires. Il représente souvent le log d’une mesure d’exposition*"
+
+(Cela explique pourquoi on a rajouté un CSV avec les données de la population en 2021 de l'INSEE
+
+(*PS: le pdf mis ci-dessus nous a été très utile notamment toute la partie sur Régression de Poisson, dans lequel on retrouve notamment des propriétés notamment le calcule de la déviance permettant de mesurer l'écart entre le modèle et l'observation*)
+
+## 4.1) Test pour une loi de Poisson
+
+Avant toute chose, pour utiliser la régression de Poisson :
+
+(On est parti sur les hypothèses de ce site : <https://www.datacamp.com/tutorial/poisson-regression> )
+
+L’offset permet de modéliser un **taux d’accidents par habitant**, et non un nombre brut. Sans offset, les départements très peuplés auraient automatiquement plus d’accidents, ce qui biaiserait complètement le modèle
+
+```{r}
+# --- LE MODÈLE NUL (Référence) ---
+# Ce modèle suppose que le taux d'accident est constant partout en France.
+# Il ne prend en compte QUE la population (offset).
+modele_nul <- glm(Nb_Accidents ~ 1 + offset(log(Population)), 
+                  family = poisson, 
+                  data = df_modele)
+
+# On compare la Déviance :
+# Si (Déviance Nulle - Déviance Modèle) est grand, alors tes variables (Pluie, Virage...) servent à quelque chose.
+modele_nul
+```
+
+```{r}
+#Voici notre modèle
+modele_poisson <- glm(Nb_Accidents ~ Part_Pluie + Part_Autoroute + 
+                      Part_Departementale + Part_Hors_Agglo + 
+                      Part_Virage + VMA_Moyenne +
+                      offset(log(Population)), 
+                      family = poisson, 
+                      data = df_modele)
+#summary(modele_poisson)
+#Deviance du modèle et la déviance nulle 
+#déviance nulle => Aucune variable explicative pour comaprer nos valeurs avec le modèle où on a rien 
+modele_poisson
+```
+
+$$
+D(y, \hat{\mu}) = 2 \sum_{i=1}^n \left[ y_i \ln\left(\frac{y_i}{\hat{\mu}_i}\right) - (y_i - \hat{\mu}_i) \right]
+$$
+
+Voici la formule de la Déviance, où
+
+\- $y_i$ est le nb d'accidents **observé** (Réel) dans le département $i$
+
+\-$\hat{\mu}$ est le nb d'accident **estimé** (Prédit) par le modèle pour un département $i$
+
+\-$n$ est le nb total d'observations
+
+```{r}
+#On récupère la déviance
+Deviance <- deviance(modele_poisson)
+# 2. Extraction des Degrés de Liberté (n - p)
+Df <- df.residual(modele_poisson)
+# 3. Calcul du Ratio de Surdispersion (Phi)
+Phi <- Deviance / Df
+# --- AFFICHAGE ---
+cat("=== DIAGNOSTIC DE LA DÉVIANCE ===\n")
+cat("Déviance Résiduelle (D) :", round(Deviance, 2), "\n")
+cat("Degrés de Liberté (Df)  :", Df, "\n")
+cat("----------------------------------\n")
+cat("Ratio de Dispersion (Phi) :", round(Phi, 4), "\n")
+
+# --- INTERPRÉTATION AUTOMATIQUE POUR TOI ---
+if (Phi > 1.5) {
+  cat("ALERTE : Il y a de la SURDISPERSION (Phi >> 1).\n")
+  cat("Le modèle de Poisson est trop rigide.\n")
+  cat("Conseil : Passe au modèle Binomial Négatif (glm.nb).")
+} else {
+  cat("Tout va bien : Le modèle respecte l'hypothèse de Poisson.")
+}
+```
+
+Ou bien on peut raisonner de la façon suivante : on pose $H_0$ : le modèle permet de reproduire les obs ; $H_1$ le modèle ne permet pas de reproduire les observations
+
+On peut utiliser la statistique de Pearson qui vérifie une loi du Chi2 à n-p degré de liberté
+
+```{r}
+# 1. Calcul de la statistique de Pearson (Ton calcul)
+# Remplace 'modele_poisson' par le vrai nom de ton objet glm
+res_pearson <- sum(residuals(modele_poisson, type = "pearson")^2)
+
+# 2. Degrés de liberté (n - p)
+ddl <- df.residual(modele_poisson)
+
+# 3. Calcul de la p-value (Probabilité que ce soit dû au hasard)
+# lower.tail = FALSE car on veut la p-valeur
+p_value <- pchisq(res_pearson, df = ddl, lower.tail = FALSE)
+
+# 4. Affichage
+print(paste("Statistique de Pearson :", round(res_pearson, 2)))
+print(paste("Degrés de liberté :", ddl))
+print(paste("P-value :", round(p_value,5)))
+
+if(res_pearson / ddl > 1.5) {
+  print("CONCLUSION : Rejet de H0. Le modèle Poisson est invalide (Surdispersion).")
+  print("Il FAUT passer au modèle Binomial Négatif.")
+}
+```
+
+Comparaison entre les deux modèles :
+
+```{r}
+print(paste("Déviance du Modèle Nul :", round(deviance(modele_nul), 2)))
+print(paste("Déviance du Ton Modèle   :", round(deviance(modele_poisson), 2)))
+
+# Petit test rapide (LRT) pour confirmer que tes variables apportent de l'info
+#anova(modele_nul, modele_poisson, test = "Chisq")
+```
+
+Ici, un apercu graphique de notre modèle de Poisson :
+
+```{r}
+library(ggplot2)
+library(ggrepel) # Pour afficher les noms des départements sans chevauchement
+
+# 1. On ajoute les prédictions au tableau
+df_modele$Prediction_Poisson <- fitted(modele_poisson)
+
+# 2. Le Graphe
+ggplot(df_modele, aes(x = Prediction_Poisson, y = Nb_Accidents)) +
+  geom_point(alpha = 0.6, color = "blue") +
+  
+  # La ligne de perfection (y = x)
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed", size = 1) +
+  
+  # On étiquette les départements où le modèle se plante gravement (> 200 erreurs)
+  geom_text_repel(aes(label = ifelse(abs(Nb_Accidents - Prediction_Poisson) > 200, dep, "")),
+                  box.padding = 0.35, point.padding = 0.5, segment.color = 'grey50') +
+  
+  labs(title = "Diagnostic Poisson : Prédictions vs Réalité",
+       x = "Nb Accident PRÉDIT (Modèle)",
+       y = "Nb Accident RÉEL (Observé)") 
+  theme_minimal()
+```
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+# --- DIAGNOSTIC VISUEL DES RÉSIDUS ---
+df_modele$Residus_Pearson <- residuals(modele_poisson, type = "pearson")
+
+ggplot(df_modele, aes(x = Prediction_Poisson, y = Residus_Pearson)) +
+  geom_point(alpha = 0.6) +
+  
+  # Lignes de tolérance théorique (-2 et +2 écarts-types)
+  geom_hline(yintercept = c(-2, 2), color = "red", linetype = "dashed") +
+  geom_hline(yintercept = 0, color = "blue") +
+  
+  # Si on voit des points très loin (ex: > 5 ou < -5), c'est de la surdispersion
+  labs(title = "Preuve de la Surdispersion (Structure en Entonnoir)",
+       subtitle = "La variance augmente avec la moyenne (les points s'écartent vers la droite)",
+       x = "Nombre d'accidents Prédit",
+       y = "Résidus Standardisés (Pearson)") +
+  theme_minimal()
+```
+
+Ainsi, on voit que le modèle de Poisson ne prédit pas correctement la fréquence des accidents la défiance étant très élevé le Chi-test étant pas en adéquation avec ce que l'on recherche.
+
+On a donc décidé de continuer la démarche établi par le PDF en utilisant un modèle de Régression binomiale négative
+
+## 4.2) Test pour modèle binomiale négative
+
+RAjouter les clustering dans le modèle linéaire (on pourra rajouter des combinaisons linéaire des paramètres X pour optimiser le modèle linéaire)
+
+Comparer log de vraisemblance et tester d'autre lois
+
+```{r}
+library(MASS) # Indispensable : c'est lui qui contient glm.nb
+
+# --- 1. AJUSTEMENT DU MODÈLE BINOMIAL NÉGATIF ---
+# On reprend EXACTEMENT les mêmes variables que Poisson pour pouvoir comparer.
+# La seule différence, c'est la fonction 'glm.nb' qui gère la surdispersion.
+
+modele_nb <- glm.nb(Nb_Accidents ~ Part_Pluie + Part_Autoroute + 
+                    Part_Departementale + Part_Hors_Agglo + 
+                    Part_Virage + VMA_Moyenne +
+                    offset(log(Population)), 
+                    data = df_modele)
+
+# Affichage des résultats bruts
+summary(modele_nb)
+
+# --- 2. LA PREUVE DE LA VICTOIRE (AIC) ---
+# L'AIC mesure le compromis Précision/Complexité. Plus il est bas, mieux c'est.
+
+aic_poisson <- AIC(modele_poisson)
+aic_nb      <- AIC(modele_nb)
+
+cat("=== DUEL DES MODÈLES (CRITÈRE AIC) ===\n")
+cat("AIC Poisson            :", round(aic_poisson, 2), "\n")
+cat("AIC Binomiale Négative :", round(aic_nb, 2), "\n")
+cat("--------------------------------------\n")
+
+if (aic_nb < aic_poisson) {
+  diff <- aic_poisson - aic_nb
+  cat("La Binomiale Négative l'emporte largement (Différence =", round(diff), ").\n")
+  cat("Cela confirme qu'il fallait gérer la surdispersion.\n")
+}
+coefficients_RR <- exp(coef(modele_nb))
+print("=== RATIOS DE RISQUE (RISK RATIOS) ===")
+print(round(coefficients_RR, 3))
+```
+
+```{r}
+
+
+# 1. Récupération du paramètre Theta (la flexibilité)
+theta <- modele_nb$theta
+
+# 2. Préparation des données pour le graph
+# On prend les prédictions du modèle NB comme base "Moyenne"
+mu <- fitted(modele_nb)
+
+# On estime la variance observée "brute" par le carré de l'erreur
+var_obs <- (df_modele$Nb_Accidents - mu)^2
+
+data_comparaison <- data.frame(Moyenne = mu, Variance_Obs = var_obs)
+
+# 3. Le Graphique du Duel
+ggplot(data_comparaison, aes(x = Moyenne, y = Variance_Obs)) +
+  # A. Les points réels (L'erreur observée)
+  geom_point(alpha = 0.3, color = "grey40") +
+  
+  # B. La contrainte de Poisson (Ligne Droite : Var = Mu)
+  geom_abline(intercept = 0, slope = 1, color = "blue", size = 1, linetype = "dashed") +
+  
+  # C. La flexibilité Binomiale Négative (Courbe : Var = Mu + Mu^2/Theta)
+  stat_function(fun = function(x) x + (x^2 / theta), 
+                color = "red", size = 1.2) +
+  
+  # Esthétique
+  labs(title = "Le Match : Poisson vs Binomiale Négative",
+       subtitle = "En Bleu : La contrainte rigide de Poisson (Var = Moyenne)\nEn Rouge : L'ajustement Binomial Négatif (Var qui explose)\nLes points gris suivent la courbe rouge : Victoire NB.",
+       x = "Moyenne Prédite (Espérance)",
+       y = "Variance Estimée (Erreur²)") +
+  theme_minimal() +
+  coord_cartesian(ylim = c(0, max(var_obs)*0.8)) # On zoome un peu pour éviter les outliers extrêmes
+```
