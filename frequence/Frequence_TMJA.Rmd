@@ -1,0 +1,118 @@
+---
+title: "Frequence_TMJA"
+output: html_document
+date: "2025-12-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Tous les packages que l'on va utiliser
+library(dplyr)   # Pour manipuler les données
+library(MASS)    # Pour la loi Binomiale Négative (glm.nb)
+library(ggplot2) # Pour les graphes
+library(readxl)
+```
+
+## A) CSV "nettoyé"
+
+```{r}
+# --- 1. CHARGEMENT CORRECT ---
+# On force le séparateur ";" pour que R découpe bien les colonnes
+df_accidents <- read.csv("~/Desktop/Projet_maths_appli/equipe_19/data/ONISR-2021.csv", 
+                         sep = ",", 
+                         stringsAsFactors = FALSE)
+
+# Petit check : ça devrait afficher "Num_Acc", "jour", "dep" séparément maintenant
+print(head(names(df_accidents)))
+
+# --- 2. FONCTION DE NETTOYAGE ---
+clean_dep <- function(d) {
+  d <- as.character(d)
+  # Si le code a 3 chiffres et finit par 0 (ex: 380), on garde les 2 premiers
+  ifelse(nchar(d) == 3 & substr(d, 3, 3) == "0", substr(d, 1, 2), d)
+}
+
+# --- 3. CRÉATION DE LA COLONNE PROPRE ---
+# Maintenant que 'dep' existe bien, mutate va fonctionner
+df_clean <- df_accidents %>%
+  mutate(dep_clean = clean_dep(dep))
+
+# Vérification
+print(unique(head(df_clean$dep_clean)))
+```
+
+## B) Filtre région Auvergne-Rhône-Alpes et dataset final
+
+```{r}
+# 1. Liste des codes départements ARA
+# On met "1" et "01" pour être sûr de tout attraper selon le formatage
+lista_ARA <- c("1", "01", "3", "03", "7", "07", "15", "26", "38", "42", "43", "63", "69", "73", "74")
+
+# 2. Filtre
+# On ne garde que les lignes dont le département est dans la liste
+df_ARA <- df_clean %>%
+  filter(as.character(dep_clean) %in% lista_ARA)
+
+print(paste("Nombre d'accidents dans la zone ARA :", nrow(df_ARA)))
+```
+
+```{r}
+df_communes <- df_ARA %>%
+  group_by(dep_clean, com) %>% 
+  summarise(
+    Nb_Accidents = n(),
+    # --- FACTEURS DE RISQUE ---
+    # Pluie (Atm = 2 ou 3)
+    Part_Pluie = mean(atm == 2 | atm == 3, na.rm = TRUE),
+    # Virage (Plan != 1)
+    Part_Virage = mean(plan != 1, na.rm = TRUE),
+    # Nuit sans éclairage (Lum = 3 ou 4)
+    Part_Nuit = mean(lum == 3 | lum == 4, na.rm = TRUE),
+    # Neige (Atm = 4) - Très pertinent pour ARA !
+    Part_Neige = mean(atm == 4, na.rm = TRUE),
+    .groups = 'drop'
+  )
+head(df_communes)
+```
+
+```{r}
+#library(readxl)
+#library(dplyr)
+
+# 1. Lecture
+# (Garde ton chemin qui fonctionnait)
+df_tmja_brut <- read_excel("/user/3/kebairii/Desktop/Projet_maths_appli/equipe_19/frequence/tmja_2021_intranet.xls", 
+                           sheet = 2)
+
+# 2. Nettoyage ROBUSTE (On utilise les numéros de colonnes)
+# Colonne 13 = Département
+# Colonne 19 = TMJA TV (Trafic)
+df_tmja_dep <- df_tmja_brut %>%
+  # On sélectionne juste les colonnes utiles par leur index
+  # et on les renomme direct
+  dplyr::select(dep_source = 13, Valeur_TMJA = 19) %>%
+  
+  # Maintenant on nettoie
+  mutate(dep_clean = as.character(as.integer(dep_source))) %>%
+  filter(dep_clean %in% lista_ARA) %>%
+  group_by(dep_clean) %>%
+  summarise(
+    Trafic_Moyen = mean(Valeur_TMJA, na.rm = TRUE)
+  )
+
+# 3. Fusion avec tes communes (df_communes doit déjà exister du bloc précédent)
+df_communes <- df_communes %>%
+  left_join(df_tmja_dep, by = "dep_clean")
+
+print("TMJA ajouté avec succès via les indices de colonnes !")
+head(df_communes)
+df_final <- df_communes %>%
+  left_join(df_tmja_dep, by = "dep_clean") %>%
+  filter(!is.na(Trafic_Moyen)) # On garde ceux qui ont un trafic
+
+print("Victoire ! TMJA ajouté.")
+head(df_final)
+```
