@@ -43,7 +43,7 @@ Ce projet vise à modéliser de la sévérité et de la fréquence des accidents
 Exporter les données du fichier `ONISR-2021.csv.zip` se trouvant dans le dossier `data`. Assurez-bien que le fichier csv exporté est dans le dossier `data`.
 
 ## Étape 2 : Modèle linéaire
-Fichier qui présente la construction du score de sévérité et l'élaboration de 3 modèles de régression linéaire. Ces modèles cherchent à expliquer ce score en fonction de variables telles que les caractéristiques de l'accident, le lieux, les véhicules et les usagers impliqués. 
+Fichier qui présente la construction du score de sévérité et l'élaboration de 3 modèles de régression linéaire. Ces modèles cherchent à expliquer ce score en fonction de variables telles que les caractéristiques de l'accident, le lieu, les véhicules et les usagers impliqués. 
 
 ## Étape 3 : Méthode de partitionnement (clustering)
 1. 
