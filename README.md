@@ -19,8 +19,8 @@ Ce projet vise à modéliser de la sévérité et de la fréquence des accidents
   -
   -
 - `Regression_linéaire` 
-  - `reg_lineaire.Rmd` est l'implémentation du modèle linéaire au format markdown
-  - `reg_lineaire.pdf` est l'implémentation du modèle linéaire  au format pdf
+  - `reg_lineaire2.Rmd` est l'implémentation du modèle linéaire au format markdown
+  - `reg_lineaire2.pdf` est l'implémentation du modèle linéaire  au format pdf
 - `clustering`
   - `clustering.Rmd` est l'implémentation du méthode de partitionnement au format markdown
   - `clustering.pdf` est l'implémentation du méthode de partitionnement au format pdf
@@ -43,9 +43,7 @@ Ce projet vise à modéliser de la sévérité et de la fréquence des accidents
 Exporter les données du fichier `ONISR-2021.csv.zip` se trouvant dans le dossier `data`. Assurez-bien que le fichier csv exporté est dans le dossier `data`.
 
 ## Étape 2 : Modèle linéaire
-
-Décrivez bien comment exécuter le fichier Rmd, étape par étape surtout la préparation et le nettoyage des données. Et aussi, assurez bien que le chemin que vous avez utilisé sont bien un chemin rélatif qui va marcher dans n'importe quel ordinateur. Et pour les packages, indique aussi comment les installer.
-
+Fichier qui présente la construction du score de sévérité et l'élaboration de 3 modèles de régression linéaire. Ces modèles cherchent à expliquer ce score en fonction de variables telles que les caractéristiques de l'accident, le lieux, les véhicules et les usagers impliqués. 
 
 ## Étape 3 : Méthode de partitionnement (clustering)
 1. 
