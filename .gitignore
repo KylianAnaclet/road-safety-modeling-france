@@ -1,1 +1,16 @@
-data/ONISR-2021.csv
+*.csv
+*.rds
+
+.Rhistory
+.RData
+.Ruserdata
+
+*.html
+*.pdf
+*_cache/
+*_files/
+
+.DS_Store
+.vscode/
+
+*.log
