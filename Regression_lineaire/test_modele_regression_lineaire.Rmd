@@ -231,6 +231,8 @@ vif_values <- vif(modele)
 
 # Affichage clair
 print(vif_values)
+#step à utiliser
+#Utilsier qu'une partie de la base
 ```
 
 ```{r}
