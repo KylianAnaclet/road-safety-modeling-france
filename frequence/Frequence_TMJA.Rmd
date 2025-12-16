@@ -24,6 +24,7 @@ Pour déterminer la fréquences des accidents avec TMJA, notre méthode est la s
 # --- 1. CHARGEMENT CORRECT ---
 # On force le séparateur ";" pour que R découpe bien les colonnes
 df_accidents <- read.csv("~/Bureau/equipe_19/data/ONISR-2021.csv", 
+
                          sep = ",", 
                          stringsAsFactors = FALSE)
 
@@ -45,8 +46,6 @@ df_clean <- df_accidents %>%
 # Vérification
 print(unique(head(df_clean$dep_clean)))
 ```
-
-Icin on
 
 ## B) Filtre région Auvergne-Rhône-Alpes et dataset final
 
@@ -119,7 +118,7 @@ Cela correspond à la colonne Nb_Accidents dans l'entête
 
 # 1. Lecture
 # (Garde ton chemin qui fonctionnait)
-df_tmja_brut <- read_excel("~/Bureau/equipe_19/frequence/tmja_2021_intranet.xls", 
+df_tmja_brut <- read_excel("~/Bureau/equipe_19/frequence/tmja_2021_intranet.xls",
                            sheet = 2)
 
 # 2. Nettoyage ROBUSTE (On utilise les numéros de colonnes)
@@ -345,4 +344,12 @@ ggplot(df_map, aes(x = long_center, y = lat_center)) +
 ```{r}
 ratios <- exp(coef(modele_binomiale_négative)) # ou le nom de ton dernier modèle
 print(ratios)
+print("TMJA ajouté avec succès via les indices de colonnes !")
+head(df_communes)
+df_final <- df_communes %>%
+  left_join(df_tmja_dep, by = "dep_clean") %>%
+  filter(!is.na(Trafic_Moyen)) # On garde ceux qui ont un trafic
+
+print("Victoire ! TMJA ajouté.")
+head(df_final)
 ```
