@@ -38,7 +38,7 @@ L'objectif est de déterminer les facteurs qui ont le plus d'impact sur la sév�
 ## Importation et Nettoyage
 
 ```{r}
-df <- read.csv("ONISR-2021.csv")
+df <- read.csv("../data/ONISR-2021.csv")
 head(df)
 ```
 
