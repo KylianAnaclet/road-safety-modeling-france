@@ -29,18 +29,20 @@ La minimisation est réalisée automatiquement par la fonction `kproto()` à tra
 
 ## A. Chargement et préparation des données
 
-Le jeu de données final étant très volumineux, un échantillon aléatoire a été extrait pour faciliter le traitement et le clustering.
+Le jeu de données final étant **très volumineux**, un échantillon aléatoire a été extrait pour faciliter le traitement et le clustering.
 
 ```{r}
 n_sample <- 1000
-df <- read.csv('accidents_db_final_clusturing.csv')
 
-# On enlève les variables non utiles pour le clustering
-df <- subset(df, select = -c(Region, Moment, nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
+# Exécuter le script « nettoyage_donnees_clustering.Rmd », situé dans le dossier clustering, afin de générer le fichier « donnees_clustering.csv ».
+df <- read.csv("../data/donnees_clustering.csv")
+
+# On enlève les variables non utiles pour le clustering (décommentez une des lignes suivantes)
+#df <- subset(df, select = -c(Region, Moment))
+#df <- subset(df, select = -c(Region, Moment, nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
 
 # On tire par hasard 1000 accidents
 df <- df[sample(nrow(df), n_sample), ]
-
 ```
 
 On n’inclut pas ces variables :
@@ -54,7 +56,7 @@ On n’inclut pas ces variables :
 Identifier les variables de type character et les convertir en facteurs.
 
 ```{r}
-#install.packages("dplyr")
+if(!require(dplyr)) install.packages("dplyr")
 library(dplyr)
 
 df <- df %>% mutate(across(where(is.character), as.factor))
@@ -66,13 +68,8 @@ Avant d'appliquer l'algorithme K-prototypes, il est nécessaire de :
 
 -   Vérifier que toutes les variable numériques sont bien des numériques.
 
--   Traiter les valeurs manquantes (NA) si nécessaire.
-
 ```{r}
 str(df)
-if(anyNA(df)) {
-  df <- na.omit(df)
-}
 ```
 
 ## B. Normalisation des variables numériques
@@ -81,7 +78,8 @@ Les variables numériques sont standardisées pour garantir que toutes contribue
 
 ```{r}
 numeric_cols <- sapply(df, is.numeric)
-df[numeric_cols] <- scale(df[numeric_cols])
+df_scaled <- df
+df_scaled[numeric_cols] <- scale(df[numeric_cols])
 ```
 
 *Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.*
@@ -92,22 +90,21 @@ On applique l'algorithme k-prototypes pour différentes valeurs de k.
 
 ```{r}
 set.seed(1)
-#install.packages("clustMixType")
-#install.packages("cluster")
+if(!require(clustMixType)) install.packages("clustMixType")
+if(!require(cluster)) install.packages("cluster")
 library(clustMixType)
 library(cluster)
 
-# Pour la méthode du coude
 k_max <- 10
 cost <- numeric(k_max)
+sil_avg <- numeric(k_max)
 
-# Pour la méthode de silhouette
+# Calculer la distance de Gower sur les données non normalisées
 d <- daisy(df, metric = "gower")
-sil_avg <- numeric()
 
-
+# Exécuter k-prototypes pour différentes valeurs de k
 for (k in 2:k_max) {
-  kp <- kproto(df, k, verbose = FALSE)
+  kp <- kproto(df_scaled, k, verbose = FALSE)
   cost[k] <- kp$tot.withinss
   
   sil <- silhouette(kp$cluster, d)
@@ -115,17 +112,16 @@ for (k in 2:k_max) {
 }
 
 # Plot méthode du coude
-plot(2:10, cost[2:k], 
+plot(2:k_max, cost[2:k_max], 
      main = "Méthode du coude pour choisir k",
      type = "b", xlab = "Nombre de clusters (k)", 
      ylab = "Somme des distances")
 
 # Plot méthode de la silhouette
-plot(2:10, sil_avg[2:10], 
+plot(2:k_max, sil_avg[2:k_max], 
      main = "Méthode de la silhouette pour choisir k",
      type = "b", xlab = "Nombre de clusters (k)", 
      ylab = "Silhouette moyenne")
-
 ```
 
 ### Observations
@@ -141,7 +137,7 @@ Bien que le pic le plus élevé de la silhouette corresponde à k = 2, nous avon
 ```{r}
 set.seed(1)
 library(clustMixType)
-res <- kproto(df, k = 4, diss = "gower", verbose = FALSE)
+res <- kproto(df_scaled, k = 4, verbose = FALSE)
 clusters <- res$cluster
 ```
 
@@ -160,7 +156,11 @@ Cette répartition révèle l'existence de groupes homogènes mais de taille var
 ### Moyennes des variables numériques par cluster
 
 ```{r}
-aggregate(. ~ clusters, data = df, FUN = mean)
+# Sélectionner uniquement les colonnes numériques
+numeric_df <- df[, sapply(df, is.numeric)]
+numeric_df$clusters <- clusters
+
+aggregate(. ~ clusters, data = numeric_df, FUN = mean)
 ```
 
 ### **Répartition des variables catégorielles par cluster**
@@ -177,15 +177,15 @@ for (col in names(df)[cat_cols]) {
 ## E. Visualisation des clusters k-prototypes
 
 ```{r}
+if(!require(factoextra)) install.packages("factoextra")
+if(!require(viridis)) install.packages("viridis")
 library(factoextra)
 library(viridis)
 
-# Extraire les clusters
 clusters <- res$cluster
 
-# Ne garder que les colonnes numériques
-num_cols <- sapply(df, is.numeric)
-df_num <- df[, num_cols]
+num_cols <- sapply(df_scaled, is.numeric)
+df_num <- df_scaled[, num_cols]
 
 fviz_cluster(list(data = df_num, cluster = clusters),
              geom = "point",

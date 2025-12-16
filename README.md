@@ -29,14 +29,7 @@ Ce projet vise à modéliser de la sévérité et de la fréquence des accidents
   - `fréquence.pdf` est l'implémentation du méthode de fréquence au format pdf
 - `rapport`
   - `rapport.tex` est le rapport collectif
-
-
-
-## Fichiers
-
 - `README.md` est ce fichier lisezmoi au format markdown
-- `sujet*.md` est le sujet au format markdown
-- `sujet.pdf` est le sujet au format pdf
 
 
 ## Étape 1 : Exportation des données
