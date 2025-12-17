@@ -162,7 +162,7 @@ Bien que le pic le plus élevé de la silhouette corresponde à k = 2, nous avon
 set.seed(1)
 library(clustMixType)
 
-res <- kproto(df_scaled, k = 4, verbose = FALSE)
+res <- kproto(df_scaled, k = 3, verbose = FALSE)
 clusters <- res$cluster
 ```
 
@@ -214,7 +214,7 @@ df_num <- df_scaled[, num_cols]
 
 p <- fviz_cluster(list(data = df_num, cluster = clusters),
              geom = "point",
-             palette = viridis(4), 
+             palette = viridis(3), 
              ellipse.type = "convex",
              repel = TRUE,
              show.clust.cent = TRUE,
@@ -286,7 +286,7 @@ Ce groupe se distingue quasi-exclusivement par des conditions météorologiques 
 
 -   **Cinétique :** Vitesse moyenne faible.
 
-### Cluster 2 : Accidents de Flux Urbain 
+### Cluster 2 : Accidents de Flux Urbain
 
 Il s'agit du segment le plus volumineux, représentant l'accidentologie "quotidienne" en ville par conditions normales.
 

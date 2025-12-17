@@ -86,10 +86,10 @@ afin d’identifier des profils types d’accidents.
 
 Cette partie modélise le nombre d'accidents afin d'identifier les facteurs de risque structurels, indépendamment du volume de trafic. Pour cela, deux types d'exposition (offsets) sont utilisés : la population (approche généraliste) et le TMJA (approche précision). Une analyse comparative quantitative et qualitative est réalisée entre le modèle de Poisson et la Binomiale Négative (gestion de la surdispersion).
 
-1. **Instructions :**
+**Instructions :**
 
 1. Lancer Rstudio et se placer dans le dossier `frequence/`
 2. S'assurer que  `donnees_departements_INSEE_2021.csv` et `tmja_2021_intranet.xls`  sont bel et  bien dans le dossier `frequence\`
-2. Exécuter le script `Frequence.Rmd` pour avoir le résultat à l'échelle départementale
-3. Exécuter le script `Frequence_TMJA.Rmd`pour voir les résultats à une échelle régionale 
+3. Exécuter le script `Frequence.Rmd` pour avoir le résultat à l'échelle départementale.
+4. Exécuter le script `Frequence_TMJA.Rmd`pour voir les résultats à une échelle régionale.
 
