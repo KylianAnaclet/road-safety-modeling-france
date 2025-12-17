@@ -1,277 +1,119 @@
-```{r}
-df <- read.csv("/user/3/kebairii/Desktop/Projet_maths_appli/equipe_19/data/ONISR-2021.csv")
-head(df)
-```
+\documentclass[a4paper, 11pt]{article}
 
-```{r}
-str(df)
-```
+% --- PACKAGES ESSENTIELS ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel} % Pour la typo française
+\usepackage{geometry}
+\geometry{hmargin=2cm, vmargin=2cm} % Marges optimisées pour gagner de la place
+\usepackage{graphicx} % Pour les images
+\usepackage{booktabs} % Pour des tableaux "pros"
+\usepackage{amsmath}  % Pour les maths
+\usepackage{float}    % Pour forcer le placement des images [H]
+\usepackage{xcolor}   % Pour mettre en valeur certains mots
 
-```{r}
-#librairies pour Pipe (%>%) et manipuler des strings
-if(!require(dplyr)) install.packages("dplyr")
-if(!require(stringr)) install.packages("stringr")
-library(dplyr)
-library(stringr)
-```
+\begin{document}
 
-```{r}
-# Création d'une fonction pour regrouper les départements par régions
+\thispagestyle{empty} % Pas de numéro de page sur la 1ère (optionnel)
 
-get_region <- function(dep_code) {
-  # On s'assure que l'entrée est un chr
-  d <- as.character(dep_code)
-  
-  case_when(
-    # Gestion de la Corse (2A et 2B)
-    d %in% c("2A", "2B", "20") ~ "Corse",
+% =============================================================================
+\section{Analyse sur la fréquence des accidents}
+% =============================================================================
+
+\section{Une double approche de la modélisation}
+
+Dans cette étude, nous analysons la variabilité du nombre d'accidents corporels par unité d'exposition afin d'identifier des facteurs de risque structurels, en comparant deux modèles de fréquences issus des données de l'ONISR, différant par l'échelle géographique et le facteur d'exposition utilisé.
+
+\begin{itemize}
+    \item \textbf{Approche généraliste} (\textit{échelle départementale – France entière}) : le facteur d’exposition est la population départementale, issue des données de l’INSEE (dataset \texttt{Df\_Pop\_brut}).\\
+    Cette approche permet d’analyser un risque d’accident rapporté à la population, relevant d’une lecture de type \textit{santé publique}.\\
+    Cela correspond au fichier \texttt{Frequence.Rmd}.
     
-    # Gestion des DOM (codes commençant par 97)
-    substr(d, 1, 2) == "97" ~ "Outre-Mer",
+    \item \textbf{Approche de précision} (\textit{échelle communale – région Auvergne-Rhône-Alpes}) : le facteur d’exposition est le Trafic Moyen Journalier Annuel (TMJA), issu des comptages routiers (dataset \texttt{Df\_TMJA\_brut}).\\
+    Cette seconde approche vise à estimer un risque rapporté à l’usage réel de l’infrastructure routière, offrant une lecture plus fine du risque routier.\\
+    Cela correspond au fichier \texttt{Frequence\_TMJA.Rmd}.
+\end{itemize}
+À l’issue de ces deux approches, les données sont structurées sous la forme d’un jeu de données final (\texttt{df\_final}), regroupant les informations issues de l’ONISR ainsi que le nombre d’accidents normalisé par le facteur d’exposition retenu (population ou TMJA selon le modèle), et servant de base à la modélisation statistique.
+\section{Méthodologie : de Poisson à la Binomiale Négative}
+\subsection{Modèles linéaires généralisés et variables explicatives}
+Pour modéliser la variable de comptage $Y$ (nombre d'accidents), nous utilisons le cadre des Modèles Linéaires Généralisés (GLM). Ce type de modèle relie l'espérance de la variable cible $E(Y)$ à une combinaison linéaire des variables explicatives $X_i$ via une fonction de lien logarithmique.
+
+L'équation générale s'écrit :
+\begin{equation}
+    \log(E(Y)) = \beta_0 + \sum_{i=1}^{p} \beta_i X_i + \text{offset}
+\end{equation}
+
+\textbf{Le rôle de l'offset :}
+L'offset est un terme dont le coefficient est contraint à 1. Il est fondamental ici car il permet de passer d'une modélisation en "nombre brut" à une modélisation en "taux". Ainsi,
+selon l'approche, l'exposition est soit la Population ($\log(\text{Pop})$), soit le Trafic ($\log(\text{TMJA})$). 
+\subsection{Justification du modèle : De Poisson à la Binomiale Négative}
+
+Dans un premier temps, nous avons modélisé la fréquence des accidents par une régression de **Poisson**. L'évaluation de la pertinence de ce modèle repose sur deux indicateurs statistiques extraits des résultats (\texttt{summary}) :
+
+\begin{itemize}
+    \item \textbf{La Déviance :} Elle quantifie l'écart entre les prédictions du modèle et les observations réelles (l'ajustement global).
+    \item \textbf{L'AIC (Akaike Information Criterion) :} Il s'agit d'un critère de comparaison permettant de sélectionner le modèle offrant le meilleur compromis entre précision et complexité (plus l'AIC est faible, meilleur est le modèle).
+\end{itemize}
+
+\paragraph{Limites de Poisson et Surdispersion}
+La loi de Poisson repose sur une hypothèse restrictive d'équidispersion, imposant que la variance soit égale à l'espérance ($Var(Y) = E(Y)$). Or, nos données présentent une variance nettement supérieure à la moyenne (surdispersion), ce qui suggère que des facteurs hétérogènes influencent fortement l'accidentologie.
+L'utilisation stricte de Poisson risquant de fausser l'estimation des erreurs types (sous-estimation du risque d'erreur), nous avons opté pour la **Loi Binomiale Négative**. Ce modèle généralise celui de Poisson en ajoutant un paramètre de dispersion $\theta$, permettant de capter correctement cette variabilité excessive. \\
+	A présent, voyons les résultats appliquées cette méthode pour nos deux approches : généraliste et précision
+\section{Résultats et Interprétation}
+\subsection{Approche Généraliste (Population) : La preuve par la Déviance}
+
+Dans cette première approche, nous avons ajusté un GLM sur l'ensemble des départements en utilisant la population comme offset. Le modèle s'écrit :
+\begin{equation*}
+    \texttt{glm(Nb\_Accidents} \sim \text{Pluie} + \text{Autoroute} + \dots + \text{offset}(\log(\text{Population}))
+\end{equation*}
+
+\paragraph{Échec du modèle de Poisson}
+Les résultats obtenus avec la loi de Poisson révèlent une inadéquation majeure avec les données. La **déviance résiduelle** atteint une valeur critique d'environ \textbf{10 000}, bien supérieure au nombre de degrés de liberté.
+Le graphique "Prédiction vs Réalité" montre cet échec.En effet, il faut savoir que tout de même le modelè Poisson réussit à expliquer les accidents dans certains départements mais il échoue notamment dans les métropoles notamment le 75 (Paris), 59 (Lille), 13 (Marseille),... Ainsi, on a décidé de montrer que cela s'explique potentiellement par le fait de la surdispersion comme le témoigne la figure ci-dessous,
+
+\begin{figure}[H]
+    \centering
+    % ICI C'EST TON FICHIER :
+    \includegraphics[width=0.85\textwidth]{figure.png}
+    \caption{Diagnostic des Résidus : Mise en évidence de la structure en entonnoir}
+    \label{fig:surdispersion}
+\end{figure}
+
+En effet, on constate notamment que la majorité des points noirs ne sont pas dans la zone souhaitée (entre les deux lignes rouges). Ainsi, cela explique que la variance augmente avec la moyenne d'où le fait qu'on a décidé d'opter pour la méthode Binomiale Négative.
+
+\paragraph{Apport de la Binomiale Négative}
+Le passage à la loi Binomiale Négative permet de corriger ce biais structurel. En introduisant un paramètre de dispersion $\theta$, la déviance chute spectaculairement à environ \textbf{4 000}.
+Cette réduction de plus de 60\% de la déviance confirme que la loi Binomiale Négative est la seule adaptée pour modéliser l'hétérogénéité des données d'accidents à cette échelle.
+
+% =============================================================================
+\subsection{Approche de Précision (TMJA) : Résultats et Interprétation}
+% =============================================================================
+
+Nous appliquons ici la même méthodologie (GLM adapté), en restreignant cette fois-ci l'analyse à la région Auvergne-Rhône-Alpes et en définissant l'offset par le logarithme du trafic moyen ($\log(\text{TMJA})$).
+
+L'intégration de cet offset et le passage à la loi Binomiale Négative améliorent drastiquement la qualité du modèle (l'AIC chute de 11 887 à \textbf{3 969}).
+L'analyse des coefficients met en évidence une dualité marquée :
+
+\begin{itemize}
+    \item \textbf{La Nuit (1.64) :} C'est un facteur aggravant majeur qui augmente le risque de 64\% à trafic constant (visibilité réduite, fatigue).
+    \item \textbf{La Neige (0.61) et les Virages (0.23) :} Ces variables présentent des coefficients inférieurs à 1, ce qui semble contre-intuitif (effet "protecteur").
+\end{itemize}
+
+Ce paradoxe apparent s'explique par une forte \textbf{adaptation comportementale}. Face à des conditions visiblement difficiles (routes de montagne, intempéries), les conducteurs — souvent habitués à ces contextes locaux — augmentent leur vigilance et réduisent leur vitesse. À l'inverse, les environnements jugés "sûrs" (lignes droites, temps sec) favorisent le relâchement de l'attention et les vitesses élevées.
+
+% =============================================================================
+\section{Limites et Perspectives}
+% =============================================================================
+Malgré la robustesse statistique de l'approche par la loi Binomiale Négative, cette étude présente certaines limites inhérentes à la nature des données et aux métriques utilisées.
+
+\begin{itemize}
+    \item \textbf{Biais d'agrégation :} Le regroupement des accidents par commune induit un lissage de l'information qui risque de masquer des "points noirs" très localisés (carrefours spécifiques), noyés dans la moyenne globale de la ville.
     
-    # Départements standards (on gère les cas "1" et "01")
-    # Auvergne-Rhône-Alpes
-    d %in% c("01", "1", "03", "3", "07", "7", "15", "26", "38", "42", "43", "63", "69", "73", "74") ~ "Auvergne-Rhône-Alpes",
+    \item \textbf{Nature statique du TMJA :} Le trafic moyen annuel est un indicateur figé qui ne capture pas la réalité dynamique (congestion, heure de pointe). Or, le risque d'accident diffère radicalement entre une circulation fluide et un trafic saturé.
     
-    # Hauts-de-France
-    d %in% c("02", "2", "59", "60", "62", "80") ~ "Hauts-de-France",
-    
-    # PACA
-    d %in% c("04", "4", "05", "5", "06", "6", "13", "83", "84") ~ "PACA",
-    
-    # Grand Est
-    d %in% c("08", "8", "10", "51", "52", "54", "55", "57", "67", "68", "88") ~ "Grand Est",
-    
-    # Occitanie
-    d %in% c("09", "9", "11", "12", "30", "31", "32", "34", "46", "48", "65", "66", "81", "82") ~ "Occitanie",
-    
-    # Normandie
-    d %in% c("14", "27", "50", "61", "76") ~ "Normandie",
-    
-    # Nouvelle-Aquitaine
-    d %in% c("16", "17", "19", "23", "24", "33", "40", "47", "64", "79", "86", "87") ~ "Nouvelle-Aquitaine",
-    
-    # Centre-Val de Loire
-    d %in% c("18", "28", "36", "37", "41", "45") ~ "Centre-Val de Loire",
-    
-    # Bourgogne-Franche-Comté
-    d %in% c("21", "25", "39", "58", "70", "71", "89", "90") ~ "Bourgogne-Franche-Comté",
-    
-    # Bretagne
-    d %in% c("22", "29", "35", "56") ~ "Bretagne",
-    
-    # Pays de la Loire
-    d %in% c("44", "49", "53", "72", "85") ~ "Pays de la Loire",
-    
-    # Île-de-France
-    d %in% c("75", "77", "78", "91", "92", "93", "94", "95") ~ "Île-de-France"
-  )
-}
-```
+    \item \textbf{Facteur humain inobservé :} Une part de la variance reste inexpliquée car nos modèles structurels ne contiennent aucune donnée sur l'état du conducteur au moment du choc (fatigue, alcoolémie, distraction), pourtant déterminant majeur de l'accidentologie.
+\end{itemize}
 
-```{r}
-# Coefficients pour le calcul du score de sévérité
-a <- 12
-b <- 4
-c <- 1
+\end{document}
+\end{document}
 
-df_final <- df %>%
- 
-  # On ajoute la colonne du score de sévérité 
-  mutate(
-    Score_Severite = (nb_tue * a) + (nb_hospitalise * b) + (nb_blesse *c)
-)%>%
-  
-  # On transforme l'heure en un numeric compris entre 0 et 23
-  # en extrayant la première partie de hrmn (heure:min)
-  mutate(
-    Heure_Num= as.numeric(str_sub(hrmn, 1, 2))
-  ) %>%
-  
-  # On crée une variable Moment pour séparer les moments de la journée
-  mutate(
-    Moment = case_when(
-      Heure_Num >= 0 & Heure_Num <= 5  ~ "Nuit Profonde",
-      Heure_Num >= 6 & Heure_Num <= 10 ~ "Matin (Pointe)",
-      Heure_Num >= 11 & Heure_Num <= 16 ~ "Journee (Creuse)",
-      Heure_Num >= 17 & Heure_Num <= 21 ~ "Soir (Pointe)",
-      Heure_Num >= 22 & Heure_Num <= 23 ~ "Soiree",
-      TRUE ~ "Autre" # Sécurité
-    ),
-    # On transforme en factor et on choisit "Journée" comme référence
-    Moment = factor(Moment, levels = c("Journée (Creuse)", "Matin (Pointe)", "Soir (Pointe)", "Soirée", "Nuit Profonde")))%>%
-  
-  # On crée la colonne région
-  mutate(
-    Region = get_region(dep),
-    Region = as.factor(Region)
-  ) %>%
-  
-  # On garde que les variables intéressantes i.e
-  # en enlevant les identifiants (Num_Acc, adr), les variables quasi vides (pr, lartpc..), ou avec trop de catégories (com, dep)
-  select(
-    Score_Severite,
-    Region,
-    Moment,
-    lum, agg, int, atm, col, 
-    catr, circ, prof, plan, surf, infra, situ, 
-    vma, 
-    nb_velo, nb_moto, nb_voiture, nb_utilitaire, nb_camion, nb_transport
-  ) %>%
-  
-    
-  # On convertit les variables chr en factor pour que r les traitent comme des variables qualitatives
-  mutate_if(is.character, as.factor) %>%
-  
-  # On supprime les lignes avec des valeurs manquantes
-  na.omit
-```
-
-```{r}
-str(df_final)
-```
-
-Après ce nettoyage, on a perdu seulement environ 4 000 lignes, ce qui est négligeable puisqu'il nous reste 52 000 lignes et nous avons gagné en qualité.
-
-```{r}
-# R crée des levels pour les variables factor afin de comparer ces levels par rapport à un level de référence (Intercept).
-# Mais initialement R choisit le level de référence par ordre alphabétique, ce qui n'est pas forcément souhaitable 
-```
-
-```{r}
-# Par exemple, R a choisit la référence "aube ou crépuscule" alors qu'on voudrait mieux comparer par rapport à la référence "plein jour"
-levels(df_final$lum)
-```
-
-```{r}
-# On affecte le level de référence que l'on souhaite
-df_final$lum <- relevel(df_final$lum, ref = "plein jour", silent=TRUE)
-df_final$atm <- relevel(df_final$atm, ref = "normale", silent=TRUE)
-df_final$prof <- relevel(df_final$prof, ref = "plat", silent=TRUE)
-df_final$plan <- relevel(df_final$plan, ref = "rectiligne", silent=TRUE)
-df_final$surf <- relevel(df_final$surf, ref = "normale", silent=TRUE)
-df_final$int <- relevel(df_final$int, ref = "aucune", silent=TRUE)
-df_final$catr <- relevel(df_final$catr, ref = "departementale", silent=TRUE)
-df_final$situ <- relevel(df_final$situ, ref = "chaussee", silent=TRUE)
-```
-
-```{r}
-# Vérifions 
-cat("Référence pour LUM :", levels(df_final$lum)[1], "\n")
-cat("Référence pour ATM :", levels(df_final$atm)[1], "\n")
-cat("Référence pour PROF :", levels(df_final$prof)[1], "\n")
-cat("Référence pour PLAN :", levels(df_final$plan)[1], "\n")
-cat("Référence pour SURF :", levels(df_final$surf)[1], "\n")
-cat("Référence pour INT :", levels(df_final$int)[1], "\n")
-cat("Référence pour CATR :", levels(df_final$catr)[1], "\n")
-cat("Référence pour SITU :", levels(df_final$situ)[1], "\n")
-```
-
-Ainsi, lorsque l'on va calculer la régression, Intercept correspondra au score de sévérité moyen quand tout est à la référence (Plein jour, Météo normale, route plate, etc.)
-
-```{r}
-# Modèle de régression: Score de sévérité expliqué par toutes les colonnes
-modele <- lm(Score_Severite ~ ., data = df_final)
-
-summary(modele)
-```
-
-```{r}
-# On divise la fenêtre graphique en 4 (2x2)
-par(mfrow = c(2, 2))
-
-# On affiche les 4 graphiques de diagnostic
-plot(modele)
-
-# On remet la fenêtre graphique normale
-par(mfrow = c(1, 1))
-```
-
-```{r}
-
-```
-
-```{r}
-# Distribution des résidus
-# 1. D'abord, on standardise les résidus (pour avoir variance ~ 1)
-# 2. On trace l'histogramme en DENSITÉ
-hist(resid(modele), 
-     breaks = 50, 
-     col = "lightblue", 
-     freq = FALSE,      # <--- INDISPENSABLE : Passe de l'échelle 15000 à 0.4
-     main = "Distribution des Résidus Standardisés",
-     xlab = "Résidus standardisés",
-     ylim = c(0, 0.5))  # On laisse un peu de marge en haut
-
-# 3. Maintenant la courbe rouge sera visible
-curve(dnorm(x, mean = 0, sd = 1), 
-      add = TRUE, 
-      col = "darkred", 
-      lwd = 2)
-```
-
-```{r}
-#On constate que les résiduis vérfient bel et bien une loi normale centrée réduite
-
-```
-
-```{r}
-modele_complexe <- lm(Score_Severite ~ vma + col + agg*catr + plan, data =df_final)
-summary(modele_complexe)
-#test sur un autre modèle
-```
-
-```{r}
-# Librairie pour le calcul du VIF (Variance Inflation Factor) (cf Cuthbert Daniel)
-if(!require(car)) install.packages("car")
-library(car)
-
-# Calcul du VIF
-vif_values <- vif(modele)
-
-# Affichage clair
-print(vif_values)
-#step à utiliser
-#Utilsier qu'une partie de la base
-```
-
-```{r}
-
-# 3. Création du Modèle OPTIMISÉ (Sans les variables redondantes)
-# On enlève surf, nb_voiture, et peut-être des variables "bruit" comme 'Region' ou 'Moment'
-#car ce sont des variables redondantes qui expliquent 2 fois la même chose 
-modele_optimise <- lm(Score_Severite ~ . - surf - nb_voiture - Region - Moment, data = df_final)
-# On a que atm représente la même chose 
-# 4. COMPARAISON DES R²
-summary(modele_optimise)
-
-```
-
-```{r}
-#A présent, on va extraire les coefficients 
-p_values <- summary(modele_optimise)$coefficients[, "Pr(>|t|)"]
-# On enlève l'Intercept
-p_values <- p_values[names(p_values) != "(Intercept)"]
-# 2. TRANSFORMATION (Indispensable pour le graphique)
-# On prend le -log10 pour que : Petite p-valeur = Grande barre
-# Exemple : p=0.01 devient 2, p=0.0001 devient 4
-importance <- -log10(p_values)
-
-# 3. On trie pour avoir les plus forts (ceux avec le plus grand -log10) en premier/haut
-importance <- sort(importance, decreasing = FALSE)
-
-# 4. Le Graphe
-par(mar=c(5, 12, 4, 2)) # Marge à gauche pour les noms longs
-barplot(importance, 
-        horiz = TRUE, 
-        las = 1, 
-        col = "cyan",
-        main = "Importance des Facteurs p/r à la p-valeur",
-        xlab = "Significativité : Plus c'est grand, plus c'est important")
-
-#Voici toute la démarche qu'on va effectuer : 1) on transforme df => df_final pour avoir uniquement des données numériques et qu'on peut traiter proprement
-#2) On vérifie les propriétés du modèle linéaire (déjà vis-à-vis des résidus pour s'assurer que les données qu'on traite a du sens ) + 4 graphes (à expliquer ??)
-#3) On utilise le VIF pour déduire les paramètres "redondants" => On en déduit un modèle de regréssion linéaire optimisé 
-# Là il faut comprendre cmt cela marche VIF (??)
-#4) A présent, on a notre modèle on s'intéresse mtn aux facteurs / coefficients devant chacun des paramètres de notre modèle de régression linéaire => On les trie par la P valeur 
-```
