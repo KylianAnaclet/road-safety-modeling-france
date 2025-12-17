@@ -1,5 +1,4 @@
 # Projet Math-Appli 1A – Modélisation des accidents routiers en France
-
 Ce projet vise à **modéliser la sévérité et la fréquence des accidents routiers en France**
 à partir des données ONISR 2021.  
 Trois approches statistiques sont mises en œuvre :
@@ -40,9 +39,13 @@ Trois approches statistiques sont mises en œuvre :
   - `clustering.pdf` : résultats du clustering  
 
 - `frequence/`  
-  - `frequence.Rmd` : implémentation du modèle de fréquence  
-  - `frequence.pdf` : résultats du modèle de fréquence  
-
+  - `Frequence.Rmd` : Implémentation du modèle de fréquence "approche généraliste" (France entière, échelle départementale, offset : Population).  
+  - `Frequence.pdf` : Résultats générés à partir de Frequence.Rmd.
+  - `donnees_departements_INSEE_2021.csv` : Données de population par département en 2021 (Source : INSEE).
+  
+  - `Frequence_TMJA.Rmd` : Implémentation du modèle de fréquence "approche précision" (Région Auvergne-Rhône-Alpes, échelle communale, offset : TMJA).
+  - `Frequence_TMJA.pdf` : Résultats générés à partir de Frequence_TMJA.Rmd.
+  - `tmja_2021_intranet.xls` : Données du Trafic Moyen Journalier Annuel 2021 (Source : TMJA Gouv).
 - `rapport/`  
   - `rapport.tex` : rapport collectif  
 
@@ -81,7 +84,11 @@ afin d’identifier des profils types d’accidents.
 
 ## Étape 4 : Modèle de fréquence
 
-Petite déscription et instruction comment lancer les fichiers qui implémente le modèle.
+Cette partie modélise le nombre d'accidents afin d'identifier les facteurs de risque structurels, indépendamment du volume de trafic. Pour cela, deux types d'exposition (offsets) sont utilisés : la population (approche généraliste) et le TMJA (approche précision). Une analyse comparative quantitative et qualitative est réalisée entre le modèle de Poisson et la Binomiale Négative (gestion de la surdispersion).
 
 1. **Instructions :**
+
+1. Lancer Rstudio et se placer dans le dossier `frequence/`
+2. Exécuter le script `Frequence.Rmd` pour avoir le résultat à l'échelle départementale
+3. Exécuter le script `Frequence_TMJA.Rmd`pour voir les résultats à une échelle régionale 
 
