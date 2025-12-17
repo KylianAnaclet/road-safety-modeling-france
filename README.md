@@ -65,7 +65,7 @@ Fichier qui présente la construction du score de sévérité et l'élaboration 
 
 **Instructions :**
 
-1. Lancer Rstudio et exécuter `reg_lineaire2.Rmd` pour exécuter le code cellule après celluleset suivre la trame du fichier
+1. Lancer Rstudio et exécuter `reg_lineaire2.Rmd` pour exécuter le code cellule après cellule et suivre la trame du fichier
 2. Sinon, ouvrir directement  `reg_lineaire2.pdf` pour obtenir le fichier `reg_lineaire2.Rmd` compilé
 
 ---
