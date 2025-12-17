@@ -50,23 +50,23 @@ Icin on
 ## B) Filtre région Auvergne-Rhône-Alpes et dataset final
 
 ```{r}
-# 1. Liste des codes départements ARA
+# 1. Liste des codes départements AURA
 # On met "1" et "01" pour être sûr de tout attraper selon le formatage
-lista_ARA <- c("1", "01", "3", "03", "7", "07", "15", "26", "38", "42", "43", "63", "69", "73", "74")
+lista_AURA <- c("1", "01", "3", "03", "7", "07", "15", "26", "38", "42", "43", "63", "69", "73", "74")
 
 
-df_ARA <- df_clean %>%
-  filter(as.character(dep_clean) %in% lista_ARA)
+df_AURA <- df_clean %>%
+  filter(as.character(dep_clean) %in% lista_AURA)
 ```
 
-df_ARA est df_accidents et on a gardé uniquement le département Auvergne Rhône-Alpes
+df_AURA est df_accidents et on a gardé uniquement le département Auvergne Rhône-Alpes
 
 Ici, 1 ligne = 1 accident
 
 ```{r}
 library(dplyr)
 
-df_communes <- df_ARA %>%
+df_communes <- df_AURA %>%
   group_by(dep_clean, com) %>%
   summarise(
     Nb_Accidents = n(),
@@ -100,7 +100,7 @@ df_tmja_dep <- df_tmja_brut %>%
   dplyr::select(dep_source = 13, Valeur_TMJA = 19) %>%
   
   mutate(dep_clean = as.character(as.integer(dep_source))) %>%
-  filter(dep_clean %in% lista_ARA) %>%
+  filter(dep_clean %in% lista_AURA) %>%
   group_by(dep_clean) %>%
   summarise(
     Trafic_Moyen = mean(Valeur_TMJA, na.rm = TRUE)
@@ -167,7 +167,7 @@ D'une part, **La nuit** (coef 1.64) apparait comme un facteur aggravant majeur q
 library(ggplot2)
 library(dplyr)
 library(stringr)
-df_map_source <- df_ARA
+df_map_source <- df_AURA
 
 if("latitude" %in% names(df_map_source)) df_map_source <- rename(df_map_source, lat = latitude)
 if("longitude" %in% names(df_map_source)) df_map_source <- rename(df_map_source, long = longitude)
