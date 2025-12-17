@@ -39,7 +39,7 @@ df <- read.csv("../data/donnees_clustering.csv")
 
 # On enlève les variables non utiles pour le clustering (décommentez une des lignes suivantes)
 #df <- subset(df, select = -c(Region, Moment))
-#df <- subset(df, select = -c(Region, Moment, nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
+df <- subset(df, select = -c(Region, Moment, nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
 
 # On tire par hasard 1000 accidents
 df <- df[sample(nrow(df), n_sample), ]
@@ -187,7 +187,7 @@ clusters <- res$cluster
 num_cols <- sapply(df_scaled, is.numeric)
 df_num <- df_scaled[, num_cols]
 
-fviz_cluster(list(data = df_num, cluster = clusters),
+p <- fviz_cluster(list(data = df_num, cluster = clusters),
              geom = "point",
              palette = viridis(4), 
              ellipse.type = "convex",
@@ -195,6 +195,15 @@ fviz_cluster(list(data = df_num, cluster = clusters),
              show.clust.cent = TRUE,
              ggtheme = theme_minimal(), 
              main = "Visualisation des clusters")
+p
+# Export the plot
+ggsave(
+  filename = "../Figures/clusters_visualisation.png",
+  plot = p,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
 ```
 
 ### Observations
