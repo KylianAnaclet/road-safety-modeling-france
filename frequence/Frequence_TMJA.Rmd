@@ -24,7 +24,7 @@ Pour déterminer la fréquences des accidents avec TMJA, notre méthode est la s
 
 ```{r}
 
-df_accidents <- read.csv("~/Bureau/equipe_19/data/ONISR-2021.csv", 
+df_accidents <- read.csv("../data/ONISR-2021.csv", 
                          sep = ",", 
                          stringsAsFactors = FALSE)
 
