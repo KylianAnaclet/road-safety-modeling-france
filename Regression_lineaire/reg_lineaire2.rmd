@@ -435,6 +435,8 @@ Les accidents sur l'autoroute sont en moyenne 20% ($\text{e}(-0.223)-1 = -0.199$
 
 Les accidents en Ile-de-France sont en moyenne 17% moins graves que les accidents en Auverge-Rhône-Alpes.
 
+La présence d'un camion supplémentaire impliqué dans l'accident augmente le score de sévérité de 10%.
+
 Remarque: Ces interprétations se font toute choses égales par ailleurs, les autres variables étant constantes. Et la gravité de l'accident est jugé selon notre score de sévérité.
 
 
