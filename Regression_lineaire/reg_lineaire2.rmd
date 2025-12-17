@@ -38,7 +38,7 @@ L'objectif est de déterminer les facteurs qui ont le plus d'impact sur la sév�
 ## Importation et Nettoyage
 
 ```{r}
-df <- read.csv("ONISR-2021.csv")
+df <- read.csv("../data/ONISR-2021.csv")
 head(df)
 ```
 
@@ -93,7 +93,63 @@ df %>%
   theme_minimal() +
   theme(plot.title = element_text(size = 20, hjust = 0.5),
         legend.position = "top") 
+
 ```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(scales) # Pour le formatage des %
+
+# Calcul des %
+df_pie <- df %>%
+  # On recrée les catégories
+  mutate(Tranche_Gravite = case_when(
+    Score_Severite <= 2 ~ "1. Léger (0-2)",        
+    Score_Severite <= 4 ~ "2. Intermédiaire (3-4)", 
+    Score_Severite >= 5 ~ "3. Grave (5+)"                           
+  )) %>%
+  # On compte le nombre d'accidents par catégorie
+  count(Tranche_Gravite) %>%
+  # On calcule le pourcentage
+  mutate(prop = n / sum(n),
+         label_percent = percent(prop, accuracy = 0.1)) # Formatage "12.5%"
+
+# CRÉATION DU CAMEMBERT
+ggplot(df_pie, aes(x = "", y = prop, fill = Tranche_Gravite)) +
+  
+  # Création des parts (barre unique empilée)
+  geom_bar(stat = "identity", width = 2, color = "white") +
+  
+  # Transformation en cercle 
+  coord_polar("y", start = 0) +
+  
+  # Ajout du texte (Pourcentages) au milieu des parts
+  geom_text(aes(label = label_percent), 
+            position = position_stack(vjust = 0.5), 
+            color = "white", fontface = "bold", size = 4) +
+  
+  
+  scale_fill_manual(values = c(
+    "1. Léger (0-2)" = "#69b3a2",        
+    "2. Intermédiaire (3-4)" = "#F39C12", 
+    "3. Grave (5+)" = "#C0392B"          
+  )) +
+  
+  # Titres
+  labs(title = "Répartition des accidents par Gravité",
+       fill = "Niveau de gravité") + # Titre de la légende
+  
+  # Thème vide (indispensable pour un beau pie chart)
+  theme_void() +
+  theme(
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5, margin = margin(b = 20)),
+    legend.position = "right",
+    legend.title = element_text(face = "bold")
+  )
+```
+
 ```{r}
 summary(df$Score_Severite)
 ```
@@ -221,37 +277,39 @@ Après ce nettoyage, on a perdu seulement environ 4 000 lignes, ce qui est négl
 
 ```{r}
 # Par exemple, R a choisit la référence "aube ou crépuscule" alors qu'on voudrait mieux comparer par rapport à la référence "plein jour"
-levels(df_final$lum)
+levels(df$lum)
 ```
 
 ```{r}
 # On affecte le level de référence que l'on souhaite
-df_final$lum <- relevel(df_final$lum, ref = "plein jour", silent=TRUE)
-df_final$atm <- relevel(df_final$atm, ref = "normale", silent=TRUE)
-df_final$prof <- relevel(df_final$prof, ref = "plat", silent=TRUE)
-df_final$plan <- relevel(df_final$plan, ref = "rectiligne", silent=TRUE)
-df_final$surf <- relevel(df_final$surf, ref = "normale", silent=TRUE)
-df_final$int <- relevel(df_final$int, ref = "aucune", silent=TRUE)
-df_final$catr <- relevel(df_final$catr, ref = "departementale", silent=TRUE)
-df_final$situ <- relevel(df_final$situ, ref = "chaussee", silent=TRUE)
+df$lum <- relevel(df$lum, ref = "plein jour", silent=TRUE)
+df$atm <- relevel(df$atm, ref = "normale", silent=TRUE)
+df$prof <- relevel(df$prof, ref = "plat", silent=TRUE)
+df$plan <- relevel(df$plan, ref = "rectiligne", silent=TRUE)
+df$surf <- relevel(df$surf, ref = "normale", silent=TRUE)
+df$int <- relevel(df$int, ref = "aucune", silent=TRUE)
+df$catr <- relevel(df$catr, ref = "departementale", silent=TRUE)
+df$situ <- relevel(df$situ, ref = "chaussee", silent=TRUE)
+df$col <- relevel(df$col, ref = "sans", silent=TRUE)
 ```
 
 ```{r}
 # Vérifions 
-cat("Référence pour LUM :", levels(df_final$lum)[1], "\n")
-cat("Référence pour ATM :", levels(df_final$atm)[1], "\n")
-cat("Référence pour PROF :", levels(df_final$prof)[1], "\n")
-cat("Référence pour PLAN :", levels(df_final$plan)[1], "\n")
-cat("Référence pour SURF :", levels(df_final$surf)[1], "\n")
-cat("Référence pour INT :", levels(df_final$int)[1], "\n")
-cat("Référence pour CATR :", levels(df_final$catr)[1], "\n")
-cat("Référence pour SITU :", levels(df_final$situ)[1], "\n")
+cat("Référence pour LUM :", levels(df$lum)[1], "\n")
+cat("Référence pour ATM :", levels(df$atm)[1], "\n")
+cat("Référence pour PROF :", levels(df$prof)[1], "\n")
+cat("Référence pour PLAN :", levels(df$plan)[1], "\n")
+cat("Référence pour SURF :", levels(df$surf)[1], "\n")
+cat("Référence pour INT :", levels(df$int)[1], "\n")
+cat("Référence pour CATR :", levels(df$catr)[1], "\n")
+cat("Référence pour SITU :", levels(df$situ)[1], "\n")
 ```
 
 Ainsi, lorsque l'on va calculer la régression, Intercept correspondra au score de sévérité moyen quand tout est à la référence (Plein jour, Météo normale, route plate, etc.)
 
 # Modèle de Régression Linéaire
 
+## Modèle 1
 ```{r}
 # Modèle de régression: Score de sévérité expliqué par toutes les colonnes
 modele <- lm(Score_Severite ~ ., data = df)
@@ -280,17 +338,12 @@ hist(resid(modele),
 ```
 On peut observer un pic autour de 0 et une asymétrie positive, qui confirme visuellement la non-normalité des résidus.
 
-```{r}
-# Calcul du VIF
-vif_values <- vif(modele)
 
-
-print(vif_values)
-```
-
+## Modèle 2
+On a vu que dans la distribution du score de sévérité, il y avait beaucoup d'accidents légers et quelques accidents très graves. Appliquer le log à ce score permet de limiter les scores extrêmes et de rapprocher la distribution empirique d'une loi Normale. 
 ```{r}
 # Modèle de régression avec le log: Score de sévérité expliqué par toutes les colonnes
-modele2 <- lm(log(Score_Severite) ~ ., data = df)
+modele2 <- lm(log(Score_Severite+1) ~ ., data = df) #On ajoute le +1 si score =0
 
 summary(modele2)
 ```
@@ -309,61 +362,82 @@ hist(resid(modele2),
 ```
 Graphique un peu plus en forme de cloche qui fait penser à la loi Normale.
 
-
-On enlève les variables surf, prof et circ de notre modèle car ces variables ne sont statistiquement pas significatives sur le score de sévérité.
+## Modèle 3
+On enlève les variables surf, prof et circ de notre modèle car ces variables ne sont statistiquement pas significatives au seuil 5% sur le score de sévérité (test de Student avec H0: coefficient nul).
 ```{r}
-modele3 <- lm(log(Score_Severite) ~. - surf - prof-circ, data=df)
+modele3 <- lm(log(Score_Severite+1) ~. - surf - prof-circ, data=df)
 summary(modele3)
 ```
-```{r}
-max(coef(modele3))
-```
+Le modèle linéaire explique 23,3% de la variabilité du score de sévérité.
+
+# Facteurs les plus influents sur la gravité
 
 ```{r}
-library(ggplot2)
+# Variables qui ont le plus d'impact sur la sévérité
+coefs <- modele3$coefficients[-1] #on enlève l'intercept
+tri_coefs <- coefs[order(abs(coefs), decreasing = TRUE)]
+head(tri_coefs, 8)
+```
+```{r}
+
 library(dplyr)
+library(ggplot2)
+library(broom)
 
 
-# Standardiser les variables pour comparer l'importance
-df_scaled <- df %>%
-  mutate(across(where(is.numeric), scale))
 
-model_scaled <- lm(Score_Severite ~ .-surf-prof-circ, data = df_scaled)
+# On prend la valeur absolue (abs) pour avoir les facteurs les plus INFLUENTS (positifs ou négatifs)
 
-# 2. Créer un dataframe des coefficients
-coef_df <- data.frame(
-  Variable = names(coef(model_scaled))[-1],  # Exclure l'intercept
-  Coefficient = coef(model_scaled)[-1] 
-) %>%
-  arrange(desc(Coefficient)) %>%
-  head(5)  # Garder les 5 plus importantes
+coef_df <- tidy(modele3) %>%
+  filter(term != "(Intercept)") %>%
+  arrange(desc(abs(estimate))) %>%
+  head(8) %>% # On en garde 8 
+  mutate(
+    Type_Influence = ifelse(estimate > 0, "Aggravant", "Protecteur"), # Pour la couleur
+  )
 
-# 3. Graphique en barres
-ggplot(coef_df, aes(x = reorder(Variable, Coefficient), y = Coefficient)) +
-  geom_bar(stat = "identity", width = 0.7) +
-  geom_text(aes(label = round(Coefficient, 3)), 
-            hjust = -0.2, size = 4, fontface = "bold") +
+
+ggplot(coef_df, aes(x = reorder(term, estimate), y = estimate, fill = Type_Influence)) +
   
 
+  geom_col(width = 0.6, alpha = 0.9) + 
   
-  coord_flip() +  
+  # Ajout des valeurs au bout des barres
+  geom_text(aes(label = round(estimate, 3)), 
+            hjust = ifelse(coef_df$estimate > 0, -0.2, 1.2), # Ajuste la position selon le signe
+            fontface = "bold", color = "grey30") +
   
-  labs(
-    title = "Les variables les plus influentes sur le Score de Sévérité",
-    x = "Variable",
-    y = "Coefficient"
-  ) +
+  coord_flip() + # On met à l'horizontale
   
-  theme_minimal(base_size = 14) +
+ 
+  scale_fill_manual(values = c("Aggravant" = "#E74C3C", "Protecteur" = "#2ECC71")) +
+  scale_y_continuous(limits = c(min(coef_df$estimate) * 1.3, 0.3)) +
+  # Titres et Axes
+  labs(title = "Facteurs les plus influents sur la Gravité",
+      
+       x = "", y = "Coefficients") +
+  
+  
+  theme_classic() +
   theme(
-    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
-    plot.subtitle = element_text(hjust = 0.5, color = "gray40"),
-    axis.title = element_text(face = "bold"),
-    panel.grid.major.y = element_blank(),
     legend.position = "top",
-    plot.background = element_rect(fill = "white", color = NA)
-  ) +
-  
-  ylim(0, max(coef_df$Coefficient) * 1.15)  
+    legend.title = element_blank(),
+    axis.text.y = element_text(size = 11, face = "bold"),
+    axis.line.y = element_blank(), # Enlève la ligne verticale moche
+    plot.title = element_text(face = "bold", size = 16)
+  )
 ```
+Les accidents hors agglomération sont en moyenne 20% ($\text{e}(0.181) -1 = 0.198$) plus graves que ceux en agglomération.
+
+Une collision frontale entre deux véhicules augmente le score de sévérité d'environ 19% par rapport aux accidents sans collision.
+
+Les accidents sur l'autoroute sont en moyenne 20% ($\text{e}(-0.223)-1 = -0.199$) moins graves que les accidents sur une départementale.
+
+Les accidents en Ile-de-France sont en moyenne 17% moins graves que les accidents en Auverge-Rhône-Alpes.
+
+La présence d'un camion supplémentaire impliqué dans l'accident augmente le score de sévérité de 10%.
+
+Remarque: Ces interprétations se font toute choses égales par ailleurs, les autres variables étant constantes. Et la gravité de l'accident est jugé selon notre score de sévérité.
+
+
 

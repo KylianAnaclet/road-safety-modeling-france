@@ -1,0 +1,348 @@
+---
+title: "Frequence_TMJA"
+output: html_document
+date: "2025-12-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#Tous les packages que l'on va utiliser
+library(dplyr)   # Pour manipuler les données
+library(MASS)    # Pour la loi Binomiale Négative (glm.nb)
+library(ggplot2) # Pour les graphes
+library(readxl)
+```
+
+## A) CSV "nettoyé"
+
+Pour déterminer la fréquences des accidents avec TMJA, notre méthode est la suivante : on part des accidents individuels (données de l'ONISR) puis on les regroupes par ville (df_communes) ensuite, on calcule TMJA moyen par département (df_tmja_dep) et ensuite on met tout dans df_final
+
+```{r}
+# --- 1. CHARGEMENT CORRECT ---
+# On force le séparateur ";" pour que R découpe bien les colonnes
+df_accidents <- read.csv("~/Bureau/equipe_19/data/ONISR-2021.csv", 
+                         sep = ",", 
+                         stringsAsFactors = FALSE)
+
+# Petit check : ça devrait afficher "Num_Acc", "jour", "dep" séparément maintenant
+print(head(names(df_accidents)))
+
+# --- 2. FONCTION DE NETTOYAGE ---
+clean_dep <- function(d) {
+  d <- as.character(d)
+  # Si le code a 3 chiffres et finit par 0 (ex: 380), on garde les 2 premiers
+  ifelse(nchar(d) == 3 & substr(d, 3, 3) == "0", substr(d, 1, 2), d)
+}
+
+# --- 3. CRÉATION DE LA COLONNE PROPRE ---
+# Maintenant que 'dep' existe bien, mutate va fonctionner
+df_clean <- df_accidents %>%
+  mutate(dep_clean = clean_dep(dep))
+
+# Vérification
+print(unique(head(df_clean$dep_clean)))
+```
+
+Icin on
+
+## B) Filtre région Auvergne-Rhône-Alpes et dataset final
+
+```{r}
+# 1. Liste des codes départements ARA
+# On met "1" et "01" pour être sûr de tout attraper selon le formatage
+lista_ARA <- c("1", "01", "3", "03", "7", "07", "15", "26", "38", "42", "43", "63", "69", "73", "74")
+
+# 2. Filtre
+# On ne garde que les lignes dont le département est dans la liste
+df_ARA <- df_clean %>%
+  filter(as.character(dep_clean) %in% lista_ARA)
+
+print(paste("Nombre d'accidents dans la zone ARA :", nrow(df_ARA)))
+```
+
+df_ARA est df_accidents et on a gardé uniquement le département Auvergne Rhône-Alpes
+
+Ici, 1 ligne = 1 accident
+
+```{r}
+library(dplyr)
+
+# 1. On part de tes données filtrées ARA (df_ARA)
+df_communes <- df_ARA %>%
+  group_by(dep_clean, com) %>%
+  summarise(
+    Nb_Accidents = n(),
+    
+    # --- CORRECTION MÉTÉO (Texte) ---
+    # On cherche le mot "pluie" (attrape "pluie forte" et "pluie legere")
+    Part_Pluie = mean(grepl("pluie", atm, ignore.case = TRUE), na.rm = TRUE),
+    
+    # On cherche le mot "neige" (attrape "neige ou grele")
+    Part_Neige = mean(grepl("neige", atm, ignore.case = TRUE), na.rm = TRUE),
+    
+    # --- ATTENTION AUX AUTRES COLONNES ---
+    # Si 'atm' est du texte, 'plan' (virage) et 'lum' (nuit) le sont probablement aussi !
+    # Je mets ici une détection générique, mais vérifie avec table(df_ARA$plan) si besoin.
+    
+    # Pour les virages : On suppose que "Rectiligne" est le mot clé pour ligne droite.
+    # Donc Virage = TOUT ce qui ne contient PAS "Rectiligne"
+    # (Si tu as un doute, fais table(df_ARA$plan) avant !)
+    Part_Virage = mean(!grepl("rectiligne", plan, ignore.case = TRUE), na.rm = TRUE),
+    
+    # Pour la nuit : On suppose que "Plein jour" est le mot clé.
+    # Nuit = TOUT ce qui n'est PAS "Plein jour"
+    Part_Nuit = mean(!grepl("plein jour", lum, ignore.case = TRUE), na.rm = TRUE),
+    
+    # Coordonnées pour la carte
+    lat_center = mean(lat, na.rm = TRUE),
+    long_center = mean(long, na.rm = TRUE),
+    
+    .groups = 'drop'
+  )
+
+# 2. VÉRIFICATION IMMÉDIATE (Indispensable)
+print("Vérification : Est-ce qu'on a enfin des chiffres ?")
+print(summary(df_communes$Part_Pluie))
+print(summary(df_communes$Part_Neige))
+```
+
+df_communes (L'agrégation) ON change l'échelle, donc on regroupe tout par communes et on veut prédire le "risque par ville" (ex : avant 10 lignes pour 10 accidents à Grenoble mtn uniquement 1 ligne par accident à Grenoble )
+
+Cela correspond à la colonne Nb_Accidents dans l'entête
+
+```{r}
+#library(readxl)
+#library(dplyr)
+
+# 1. Lecture
+# (Garde ton chemin qui fonctionnait)
+df_tmja_brut <- read_excel("~/Bureau/equipe_19/frequence/tmja_2021_intranet.xls", 
+                           sheet = 2)
+
+# 2. Nettoyage ROBUSTE (On utilise les numéros de colonnes)
+# Colonne 13 = Département
+# Colonne 19 = TMJA TV (Trafic)
+df_tmja_dep <- df_tmja_brut %>%
+  # On sélectionne juste les colonnes utiles par leur index
+  # et on les renomme direct
+  dplyr::select(dep_source = 13, Valeur_TMJA = 19) %>%
+  
+  # Maintenant on nettoie
+  mutate(dep_clean = as.character(as.integer(dep_source))) %>%
+  filter(dep_clean %in% lista_ARA) %>%
+  group_by(dep_clean) %>%
+  summarise(
+    Trafic_Moyen = mean(Valeur_TMJA, na.rm = TRUE)
+  )
+
+# 3. Fusion avec tes communes (df_communes doit déjà exister du bloc précédent)
+df_communes <- df_communes %>%
+  left_join(df_tmja_dep, by = "dep_clean")
+print("TMJA ajouté avec succès via les indices de colonnes !")
+
+# 1. CRÉATION DE DF_FINAL
+# On part de df_communes (qui contient maintenant le trafic)
+# et on enlève les lignes vides (sécurité)
+df_final <- df_communes %>%
+  filter(!is.na(Trafic_Moyen))
+```
+
+df_tmja_brut correspond au fichier Excel téléchargés sur le site du TMJA
+
+df_tmja_dep (le résumé) : comme on ne peut pas coller le trafic sur chaque rue, on a calculé la moyenne.
+
+Ainsi, on a transformé l'Excel en un petit tableau simple :
+
+-   Département 38 (Isère) -\> Trafic Moyen = X véhicules/jour.
+
+-   Département 15 (Cantal) -\> Trafic Moyen = Y véhicules/jour.
+
+## C) Test
+
+A présent, que le dataset est bien fiable, organisé et bien propre, on va réaliser tous nos test sur df_final
+
+```{r}
+modele_poisson <- glm(Nb_Accidents ~ Part_Pluie + Part_Neige + Part_Virage + Part_Nuit + 
+                      offset(log(Trafic_Moyen)), 
+                      family = poisson, 
+                      data = df_final)
+
+summary(modele_poisson)
+```
+
+```{r}
+modele_binomiale_négative <- glm.nb(Nb_Accidents ~ Part_Pluie + Part_Neige + Part_Virage + Part_Nuit + 
+                         offset(log(Trafic_Moyen)), 
+                         data = df_final)
+summary(modele_binomiale_négative)
+```
+
+```{r}
+# 1. Calcul des Déviances
+deviance_poisson <- deviance(modele_poisson)
+deviance_nb <- deviance(modele_complet) # Assure-toi que c'est le bon nom de variable
+
+# 2. Affichage propre (avec paste)
+
+print(paste("Déviance Poisson :", round(deviance_poisson, 2)))
+print(paste("Déviance Binom. Négative :", round(deviance_nb, 2)))
+
+# 3. Le Verdict Automatique
+
+if(deviance_poisson < deviance_nb){
+  print(">>> RÉSULTAT : La loi de Poisson explique mieux la fréquences des accidents dans l'ARA.")
+} else {
+  print(">>> RÉSULTAT : La loi Binomiale Négative explique mieux la fréquences des accidents dans l'ARA.")
+  print("(Ce qui confirme qu'il y a de la surdispersion : la variance est plus grande que la moyenne)")
+}
+```
+
+## D) Apercu visuel sur la carte de France
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(stringr)
+
+# --- 1. NETTOYAGE DES COORDONNÉES GPS (df_ARA) ---
+# On s'assure que latitude/longitude sont bien des chiffres
+df_map_source <- df_ARA
+
+# On renomme si nécessaire (latitude -> lat)
+if("latitude" %in% names(df_map_source)) df_map_source <- rename(df_map_source, lat = latitude)
+if("longitude" %in% names(df_map_source)) df_map_source <- rename(df_map_source, long = longitude)
+
+# Conversion forcée en numérique (gère les virgules éventuelles)
+df_map_source$lat <- as.numeric(gsub(",", ".", as.character(df_map_source$lat)))
+df_map_source$long <- as.numeric(gsub(",", ".", as.character(df_map_source$long)))
+
+# --- 2. CALCUL DES CENTRES PAR COMMUNE ---
+coords_communes <- df_map_source %>%
+  filter(!is.na(lat) & !is.na(long)) %>% # On vire les lignes vides
+  group_by(dep_clean, com) %>%
+  summarise(
+    lat_center = mean(lat, na.rm = TRUE),
+    long_center = mean(long, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+# --- 3. FUSION AVEC TON TABLEAU DE RÉSULTATS ---
+# ICI LA CORRECTION : On utilise dplyr::select pour éviter le bug MASS
+# On retire les anciennes coords de df_final s'il y en a, pour éviter les doublons
+df_final_clean <- df_final %>% 
+  dplyr::select(-any_of(c("lat_center", "long_center")))
+
+# On colle les nouvelles coordonnées propres
+df_map <- df_final_clean %>%
+  inner_join(coords_communes, by = c("dep_clean", "com"))
+
+print(paste("Nombre de communes prêtes à être affichées :", nrow(df_map)))
+
+# --- 4. LA CARTE (VIRAGES) ---
+# Calcul du zoom automatique
+min_x <- min(df_map$long_center, na.rm = TRUE) - 0.2
+max_x <- max(df_map$long_center, na.rm = TRUE) + 0.2
+min_y <- min(df_map$lat_center, na.rm = TRUE) - 0.2
+max_y <- max(df_map$lat_center, na.rm = TRUE) + 0.2
+
+ggplot(df_map, aes(x = long_center, y = lat_center)) +
+  # Fond de carte
+  borders("france", colour = "grey90", fill = "white") +
+  
+  # Les points (Part_Virage)
+  geom_point(aes(size = Nb_Accidents, color = Part_Virage), alpha = 0.7) +
+  
+  # Couleurs : Bleu (Plat) -> Rouge (Virage)
+  scale_color_gradient(low = "#1f78b4", high = "#e31a1c", name = "% Virages",
+                       limits = c(0, 1)) +
+  
+  # Taille
+  scale_size_continuous(range = c(0.5, 6), name = "Vol. Accidents") +
+  
+  # Zoom
+  coord_quickmap(xlim = c(min_x, max_x), ylim = c(min_y, max_y)) +
+  
+  # Titres
+  labs(title = "Géographie du Risque : Virages vs Lignes Droites",
+       subtitle = "Bleu = Plaine | Rouge = Montagne",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal()
+```
+
+```{r}
+ratios <- exp(coef(modele_binomiale_négative)) # ou le nom de ton dernier modèle
+print(ratios)
+```
+
+CARTE PART_NUIT
+
+```{r}
+ggplot(df_map, aes(x = long_center, y = lat_center)) +
+  # Fond
+  borders("france", colour = "grey90", fill = "white") +
+  
+  # --- CHANGEMENT ICI : Part_Nuit ---
+  geom_point(aes(size = Nb_Accidents, color = Part_Nuit), alpha = 0.7) +
+  
+  # Couleurs : Bleu (Jour) -> Rouge Foncé (Nuit)
+  # On garde limits=c(0,1) pour que l'échelle soit juste
+  scale_color_gradient(low = "#1f78b4", high = "#a50f15", name = "% Nuit",
+                       limits = c(0, 1)) +
+  
+  scale_size_continuous(range = c(0.5, 6), name = "Vol. Accidents") +
+  coord_quickmap(xlim = c(min_x, max_x), ylim = c(min_y, max_y)) +
+  
+  # Titres adaptés
+  labs(title = "Géographie des horaires : Jour vs Nuit",
+       subtitle = "Bleu = Majorité d'accidents de Jour | Rouge = Forte part de Nuit",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(df_map, aes(x = long_center, y = lat_center)) +
+  borders("france", colour = "grey90", fill = "white") +
+  
+  # --- CHANGEMENT ICI : Part_Pluie ---
+  geom_point(aes(size = Nb_Accidents, color = Part_Pluie), alpha = 0.7) +
+  
+  # Couleurs : Orange (Sec) -> Bleu (Pluie)
+  scale_color_gradient(low = "#fdae61", high = "#08519c", name = "% Pluie",
+                       limits = c(0, 1)) +
+  
+  scale_size_continuous(range = c(0.5, 6), name = "Vol. Accidents") +
+  coord_quickmap(xlim = c(min_x, max_x), ylim = c(min_y, max_y)) +
+  
+  labs(title = "Facteur Météo : La Pluie",
+       subtitle = "Orange = Temps sec dominant | Bleu foncé = Part de pluie plus importante",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(df_map, aes(x = long_center, y = lat_center)) +
+  borders("france", colour = "grey90", fill = "white") +
+  
+  # --- CHANGEMENT ICI : Part_Neige ---
+  geom_point(aes(size = Nb_Accidents, color = Part_Neige), alpha = 0.7) +
+  
+  # Couleurs : Gris (Pas de neige) -> Cyan vif (Neige)
+  scale_color_gradient(low = "grey85", high = "#00BFFF", name = "% Neige",
+                       limits = c(0, 1)) +
+  
+  scale_size_continuous(range = c(0.5, 6), name = "Vol. Accidents") +
+  coord_quickmap(xlim = c(min_x, max_x), ylim = c(min_y, max_y)) +
+  
+  labs(title = "Facteur Météo : La Neige (Événement rare)",
+       subtitle = "Gris = Absence de neige | Cyan = Présence d'accidents neigeux (Massifs)",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal()
+```
+
+```{r}
+ratios <- exp(coef(modele_binomiale_négative)) # ou le nom de ton dernier modèle
+print(ratios)
+```
