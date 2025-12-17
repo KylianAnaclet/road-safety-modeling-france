@@ -36,7 +36,7 @@ n_sample <- 1000
 df <- read.csv('accidents_db_final_clusturing.csv')
 
 # On enlève les variables non utiles pour le clustering
-df <- subset(df, select = -c(Region, Moment, nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
+df <- subset(df, select = -c(Region, Moment,nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
 
 # On tire par hasard 1000 accidents
 df <- df[sample(nrow(df), n_sample), ]
@@ -84,7 +84,31 @@ numeric_cols <- sapply(df, is.numeric)
 df[numeric_cols] <- scale(df[numeric_cols])
 ```
 
-*Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.*
+*Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.* \## C. Évaluation de la tendance à former des clusters :
+
+Avant de commencer on doit tout d'abord s'assurer que l'utilisation de la méthode de clustering est légitime ici (s'assurer que les données ne sont pas réparties de façon homogène). Pour ce faire on utilise la méthode statistique en calculant la statistique de Hopkins calculé avec la formule :
+
+$$
+H = \frac{\sum_{i=1}^{n}{x_i}}{\sum_{i=1}^{n}{x_i}+\sum_{i=1}^{n}{y_i}}
+$$
+
+avec
+
+-   **xi** : la distance d'un i éme point pi choisi aléatoirement dans notre distribution à tster avec son plus proche voisin dans la même distribution
+
+-   **yi :** la distance d'un i éme point qi choisi aléatoirement dans une distribution aléatoire uniforme avec son plus proche voisin dans la distribution
+
+Nos hypothèses étant :
+
+-   **H0 :** Les données sont uniformément distribués
+
+-   **H1 :** Les données ne sont pas uniformément distribués
+
+    ```{r}
+    library(hopkins)
+
+    hopkins(df_scaled[, numeric_cols])
+    ```
 
 ## C. Choix du nombre de clusters (k)
 
@@ -141,7 +165,7 @@ Bien que le pic le plus élevé de la silhouette corresponde à k = 2, nous avon
 ```{r}
 set.seed(1)
 library(clustMixType)
-res <- kproto(df, k = 4, diss = "gower", verbose = FALSE)
+res <- kproto(df, k = 3, diss = "gower", verbose = FALSE)
 clusters <- res$cluster
 ```
 
@@ -160,7 +184,8 @@ Cette répartition révèle l'existence de groupes homogènes mais de taille var
 ### Moyennes des variables numériques par cluster
 
 ```{r}
-aggregate(. ~ clusters, data = df, FUN = mean)
+aggregate(. ~ clusters, data = df[, numeric_cols], FUN = mean)
+str(df)
 ```
 
 ### **Répartition des variables catégorielles par cluster**
@@ -201,7 +226,84 @@ fviz_cluster(list(data = df_num, cluster = clusters),
 
 Les groupes peuvent se chevaucher car la visualisation 2D (via PCA) projette un espace multidimensionnel sur un simple plan. Cette réduction dimensionnelle entraîne une perte d'information, et des clusters bien séparés dans l'espace original peuvent alors apparaître mélangés sur le graphique.
 
-## F. Conclusion
+## F. Test de la qualité du clustering :
+
+Afin d'évaluer la qualité du clustering on évalue les deux indices :
+
+-   l'indice de Silhouette pour chaque cluster qui pour chaque élément évalue à quel point un élément est "similaire" par rapport aux autres éléments du même cluster .
+
+-   l'indice de Dunn qui est défini comme suit :
+
+    $$
+    D=\frac{min.separation}{max.diameter}
+    $$
+
+    De plus on veille à adapter cette methode d'évaluation à la methode de clustering utilisée (k-prototype) et ce en utilisant justement la distance de gower qui prend en compte les variables catégorielles
+
+```{r}
+library(cluster)  # Pour daisy et silhouette
+library(fpc)      # Pour cluster.stats (Dunn)
+
+
+# Calcul de la matrice de distance de Gower 
+dist_gower <- daisy(df, metric = "gower")
+
+# On croise la distance réelle (Gower) avec les clusters existants
+sil_obj <- silhouette(clusters, dist_gower)
+
+# Affichage des résultats Silhouette
+cat("Score de Silhouette Moyen :", summary(sil_obj)$avg.width, "\n")
+
+stats_clusters <- cluster.stats(d = dist_gower, clustering = clusters)
+
+cat("Indice de Dunn :", stats_clusters$dunn, "\n")
+
+# On affiche l'indice silouhette pour chaque cluster pour identifier les clusters 'les mieux formés'
+print("Détail par cluster (Silhouette) :")
+summary(sil_obj)$clus.avg.widths
+```
+
+## E. Inteprétation de chaque cluster :
+
+### Cluster 1 : Accidents Urbains sous Intempéries
+
+Ce groupe se distingue quasi-exclusivement par des conditions météorologiques et de surface dégradées.
+
+-   **Conditions :** Forte prédominance de la pluie (légère ou forte) associée à une surface mouillée.
+
+-   **Localisation :** Majoritairement en agglomération.
+
+-   **Véhicules impliqués :** Une surreprésentation notable des transports en commun, suggérant des problématiques de freinage ou d'adhérence impliquant des véhicules lourds dans un trafic dense.
+
+-   **Cinétique :** Vitesse moyenne faible.
+
+### Cluster 2 : Accidents de Flux Urbain 
+
+Il s'agit du segment le plus volumineux, représentant l'accidentologie "quotidienne" en ville par conditions normales.
+
+-   **Configuration :** Exclusivement en agglomération, concentré sur les intersections (carrefours, giratoires) avec une prédominance de chocs latéraux (refus de priorité, changements de file).
+
+-   **Usagers Vulnérables :** Forte implication des deux-roues (vélos et motos).
+
+-   **Conditions :** Environnement favorable (plein jour, météo normale, surface sèche).
+
+-   **Cinétique :** Vitesse moyenne la plus basse des trois groupes.
+
+### Cluster 3 : Accidents Routiers à Haute Cinétique
+
+Ce cluster regroupe les accidents hors agglomération, caractérisés par une dangerosité potentielle accrue due à la vitesse.
+
+-   **Localisation :** Routes départementales et autoroutes (hors agglomération).
+
+-   **Facteurs aggravants :** Surreprésentation des accidents nocturnes ("Nuit sans éclairage") et des tracés en courbe.
+
+-   **Typologie :** Nombreuses pertes de contrôle (sorties de route sur accotement) ou chocs frontaux.
+
+-   **Véhicules :** Implication majeure des véhicules légers et poids lourds ; absence quasi-totale d'usagers vulnérables (piétons/vélos).
+
+-   **Cinétique :** Vitesse moyenne très élevée.
+
+## G. Conclusion
 
 L'algorithme K-prototypes a identifié quatre groupes d'accidents distincts en combinant variables numériques et catégorielles. Cette segmentation permet d'analyser les différents profils d'accidents et d'identifier les facteurs de risque spécifiques à chaque groupe.
 
