@@ -63,9 +63,6 @@ Trois approches statistiques sont mises en œuvre :
 ## Étape 2 : Modèle linéaire
 Fichier qui présente la construction du score de sévérité et l'élaboration de 3 modèles de régression linéaire. Ces modèles cherchent à expliquer ce score en fonction de variables telles que les caractéristiques de l'accident, le lieu, les véhicules et les usagers impliqués. 
 
-**Instructions :**
-
-1. 
 ---
 
 ## Étape 3 : Méthode de partitionnement (clustering)
