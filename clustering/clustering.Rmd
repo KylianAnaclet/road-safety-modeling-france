@@ -32,7 +32,7 @@ La minimisation est réalisée automatiquement par la fonction `kproto()` à tra
 Le jeu de données final étant **très volumineux**, un échantillon aléatoire a été extrait pour faciliter le traitement et le clustering.
 
 ```{r}
-set.seed(1234)
+set.seed(123)
 n_sample <- 1000
 
 # Exécuter le script « nettoyage_donnees_clustering.Rmd », situé dans le dossier clustering, afin de générer le fichier « donnees_clustering.csv ».
@@ -83,7 +83,9 @@ df_scaled <- df
 df_scaled[numeric_cols] <- scale(df[numeric_cols])
 ```
 
-*Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.* \## C. Évaluation de la tendance à former des clusters :
+*Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.* Évaluation de la tendance à former des clusters :
+
+## C. Verification de la légitimité de clustering
 
 Avant de commencer on doit tout d'abord s'assurer que l'utilisation de la méthode de clustering est légitime ici (s'assurer que les données ne sont pas réparties de façon homogène). Pour ce faire on utilise la méthode statistique en calculant la statistique de Hopkins calculé avec la formule :
 
@@ -93,19 +95,17 @@ $$
 
 avec
 
--   **xi** : la distance d'un i éme point, $pi$ choisi aléatoirement dans notre distribution à tster avec son plus proche voisin dans la même distribution
+-   $x_i$ la distance d'un i-éme point $p_i$ choisi aléatoirement dans notre distribution à tster avec son plus proche voisin dans la même distribution
 
--   **yi :** la distance d'un i éme point qi choisi aléatoirement dans une distribution aléatoire uniforme avec son plus proche voisin dans la distribution
+-   $y_i$ **:** la distance d'un i-éme point qi choisi aléatoirement dans une distribution aléatoire uniforme avec son plus proche voisin dans la distribution
 
 Nos hypothèses étant :
 
--   **H0 :** Les données sont uniformément distribués
+-   $H_0$ **:** Les données sont uniformément distribués
 
--   **H1 :** Les données ne sont pas uniformément distribués
+-   $H_1$ **:** Les données ne sont pas uniformément distribués
 
     ```{r}
-    if(!require(hopkins)) install.packages("hopkins")
-
     library(hopkins)
 
     hopkins(df_scaled[, numeric_cols])
@@ -153,11 +153,9 @@ plot(2:k_max, sil_avg[2:k_max],
 
 ### Observations
 
-Le graphique de la méthode du coude montre que la courbe se stabilise à k = 3, tandis que la silhouette présente deux maxima à k = 2 et k = 3.
+Le graphique de la méthode du coude montre que la courbe se stabilise à k = 6, tandis que la silhouette présente deux maxima à k = 2 et k = 3.
 
-Bien que le pic le plus élevé de la silhouette corresponde à k = 2, nous avons choisi k = 3 car il est cohérent avec le coude et permet une segmentation plus détaillée des observations.
-
-***Remarque** : Ces résultats dépendent fortement de l'échantillon tiré. Avec un autre échantillon aléatoire, les courbes du coude et de la silhouette pourraient suggérer un nombre de clusters différent.*
+*Remarque : Ces résultats dépendent fortement de l'échantillon tiré. Avec un autre échantillon aléatoire, les courbes du coude et de la silhouette pourraient suggérer un nombre de clusters différent.*
 
 ## D. Application de k-prototypes et analyse des résultats
 
@@ -174,6 +172,12 @@ clusters <- res$cluster
 ```{r}
 table(clusters)
 ```
+
+L'analyse des clusters montre que les quatres groupes identifiés présentent des tailles différentes. Le cluster 2 regroupe la majorité des observations, tandis que le cluster 1 correspond a un petit sous-groupe spécifique. Les clusters 3 occupe une taille intermédiaire.
+
+Cette répartition révèle l'existence de groupes homogènes mais de taille variées, permettant d'identifier et d'interpéter les profils distincts propres à chaque cluster.
+
+*Remarque : Ces effectifs varient selon l'échantillon sélectionné.*
 
 ### Moyennes des variables numériques par cluster
 
@@ -236,9 +240,9 @@ Les groupes peuvent se chevaucher car la visualisation 2D (via PCA) projette un 
 
 Afin d'évaluer la qualité du clustering on évalue les deux indices :
 
--   L'indice de Silhouette pour chaque cluster qui pour chaque élément évalue à quel point un élément est "similaire" par rapport aux autres éléments du même cluster .
+-   l'indice de Silhouette pour chaque cluster qui pour chaque élément évalue à quel point un élément est "similaire" par rapport aux autres éléments du même cluster .
 
--   L'indice de Dunn qui est défini comme suit :
+-   l'indice de Dunn qui est défini comme suit :
 
     $$
     D=\frac{min.separation}{max.diameter}
@@ -247,10 +251,9 @@ Afin d'évaluer la qualité du clustering on évalue les deux indices :
     De plus on veille à adapter cette methode d'évaluation à la methode de clustering utilisée (k-prototype) et ce en utilisant justement la distance de gower qui prend en compte les variables catégorielles
 
 ```{r}
-if(!require(cluster)) install.packages("cluster")
-if(!require(fpc)) install.packages("fpc")
-library(cluster)
-library(fpc)
+library(cluster)  # Pour daisy et silhouette
+library(fpc)      # Pour cluster.stats (Dunn)
+
 
 # Calcul de la matrice de distance de Gower 
 dist_gower <- daisy(df, metric = "gower")
@@ -269,6 +272,10 @@ cat("Indice de Dunn :", stats_clusters$dunn, "\n")
 print("Détail par cluster (Silhouette) :")
 summary(sil_obj)$clus.avg.widths
 ```
+
+Bien que les indicateurs statistiques reflètent la grande complexité des données d'accidentologie, ils confirment la **cohérence globale** de la partition. Le score de silhouette positif indique que les observations sont, en moyenne, bien classées malgré la nature continue du phénomène accidentel qui rend les frontières entre groupes naturellement diffuses.
+
+Dans le détail, le **Cluster 3** se détache avec la meilleure stabilité, validant l'identification d'un profil "routier" spécifique.
 
 ## E. Inteprétation de chaque cluster :
 
@@ -312,6 +319,6 @@ Ce cluster regroupe les accidents hors agglomération, caractérisés par une da
 
 ## G. Conclusion
 
-L'algorithme K-prototypes a identifié trois groupes d'accidents distincts en combinant variables numériques et catégorielles. Cette segmentation permet d'analyser les différents profils d'accidents et d'identifier les facteurs de risque spécifiques à chaque groupe.
+L'algorithme K-prototypes a identifié quatre groupes d'accidents distincts en combinant variables numériques et catégorielles. Cette segmentation permet d'analyser les différents profils d'accidents et d'identifier les facteurs de risque spécifiques à chaque groupe.
 
 Ces résultats dépendent de l'échantillon sélectionné et pourraient varier avec un échantillonnage différent.
