@@ -64,7 +64,7 @@ routiers   } \\[0.2cm]
 
 \section{Introduction et Problématique}
 
-La sécurité routière constitue un enjeu majeur de santé publique . Si les décennies passées ont vu le nombre de tués sur les routes diminuer drastiquement depuis les années 1980 grâce aux progrès technologiques et réglementaires, cette tendance positive s'essouffle aujourd'hui.
+La sécurité routière constitue un enjeu majeur de santé publique. Si les décennies passées ont vu le nombre de tués sur les routes diminuer drastiquement depuis les années 1980 grâce aux progrès technologiques et réglementaires, cette tendance positive s'essouffle aujourd'hui.
 
 Face à cette évolution complexe, l'analyse des données de l'ONISR (Observatoire National Interministériel de la Sécurité Routière) pour l'année 2021 vise à dépasser le simple constat descriptif. Ce projet s'articule ainsi autour de la problématique suivante:
 
@@ -207,8 +207,7 @@ Ce groupe, majoritairement en agglomération, regroupe les accidents survenant p
 L'évaluation quantitative du modèle, avec un coefficient de silhouette moyen de 0.2677, atteste de la pertinence de la segmentation malgré la complexité intrinsèque des données d'accidentologie. Ce résultat positif confirme que le modèle capture une structure réelle, même si la faible valeur de l'indice de Dunn (0.001133) rappelle que les frontières entre les types d'accidents sont naturellement fluides plutôt que strictes. Dans le détail, la meilleure performance du Cluster 2 (0.3107) valide notre capacité à isoler nettement le profil routier à haute cinétique sur les voies rapides hors agglomération. Le Cluster 1 présente un score intermédiaire (0.2861), reflétant la diversité des configurations d'accidents hors agglomération en conditions diurnes. Le Cluster 3, avec le score le plus faible (0.2277), traduit la complexité du milieu urbain nocturne où les contextes d'accidents aux intersections se chevauchent naturellement, sans nuire à la cohérence de l'interprétation globale.
 
 \subsubsection{Visualisation et séparation}
-La projection des clusters en deux dimensions par ACP permet de visualiser le partitionnement. Les chevauchements observés sont dus à la réduction dimensionnelle, mais dans l'espace d'origine, les clusters sont bien mieux séparés.
-\begin{figure}[htbp]
+\begin{figure}[h!]
     \centering
     \includegraphics[
         width=\textwidth,
@@ -218,6 +217,8 @@ La projection des clusters en deux dimensions par ACP permet de visualiser le pa
     \caption{Visualisation des clusters obtenus}
     \label{fig:clusters}
 \end{figure}
+La projection des clusters (Figure 3) en deux dimensions par ACP permet de visualiser le partitionnement. Les chevauchements observés sont dus à la réduction dimensionnelle, mais dans l'espace d'origine, les clusters sont bien mieux séparés.
+
 
 
 \section{Analyse sur la fréquence des accidents}

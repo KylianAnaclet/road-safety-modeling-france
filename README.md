@@ -76,11 +76,11 @@ Le clustering permet de **regrouper les accidents selon des caractéristiques si
 afin d’identifier des profils types d’accidents.
 
 **Instructions :**
-
-1. Lancer RStudio et se placer dans le dossier `clustering/`.  
-2. Exécuter le script `nettoyage_donnees_clustering.Rmd` pour préparer les données.  
-3. Vérifier que le fichier `donnees_clustering.csv` est bien généré dans le dossier `data/`.  
-4. Ouvrir `clustering.Rmd` et exécuter toutes les cellules pour appliquer la méthode de partitionnement.
+1. Ouvrir directement  `clustering.pdf` pour obtenir le fichier `clustering.Rmd` compilé.
+2. Sinon, lancer RStudio et se placer dans le dossier `clustering/`.  
+3. Exécuter le script `nettoyage_donnees_clustering.Rmd` pour préparer les données.  
+4. Vérifier que le fichier `donnees_clustering.csv` est bien généré dans le dossier `data/`.  
+5. Ouvrir `clustering.Rmd` et exécuter toutes les cellules pour appliquer la méthode de partitionnement.
 
 ---
 
