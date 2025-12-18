@@ -96,7 +96,19 @@ Nos hypothèses étant :
     }
     ```
 
-## C. Choix du nombre de clusters (k)
+## C. Normalisation des variables numériques
+
+Les variables numériques sont standardisées pour garantir que toutes contribuent équitablement au calcul des distances, indépendamment de leur échelle de mesure. Cela évite qu'une variable avec de grandes valeurs domine artificiellement la formation des clusters.
+
+```{r}
+numeric_cols <- sapply(df, is.numeric)
+df_scaled <- df
+df_scaled[numeric_cols] <- scale(df[numeric_cols])
+```
+
+*Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.*
+
+## D. Choix du nombre de clusters (k)
 
 On applique l'algorithme k-prototypes pour différentes valeurs de k.
 
@@ -116,7 +128,7 @@ d <- daisy(df, metric = "gower")
 
 # Exécuter k-prototypes pour différentes valeurs de k
 for (k in 2:k_max) {
-  kp <- kproto(df, k, verbose = FALSE)
+  kp <- kproto(df_scaled, k, verbose = FALSE)
   cost[k] <- kp$tot.withinss
   
   sil <- silhouette(kp$cluster, d)
@@ -142,16 +154,16 @@ La méthode du coude montre une stabilisation à partir de k = 4, tandis que l�
 
 Pour choisir le meilleur k, nous testons k = 2, 3 et 4 en comparant leurs indices de qualité.
 
-## D. Application de k-prototypes et analyse des résultats
+## E. Application de k-prototypes et analyse des résultats
 
 ```{r}
 set.seed(321)
-res_k2 <- kproto(df, k = 2, verbose = FALSE)
-res_k3 <- kproto(df, k = 3, verbose = FALSE)
-res_k4 <- kproto(df, k = 4, verbose = FALSE)
+res_k2 <- kproto(df_scaled, k = 2, verbose = FALSE)
+res_k3 <- kproto(df_scaled, k = 3, verbose = FALSE)
+res_k4 <- kproto(df_scaled, k = 4, verbose = FALSE)
 ```
 
-## E. Test de la qualité du clustering
+## F. Test de la qualité du clustering
 
 Afin d'évaluer la qualité du clustering on évalue les deux indices :
 
@@ -194,7 +206,7 @@ Bien que $k=2$ offre la meilleure qualité statistique avec des clusters très c
 table(res_k3$cluster)
 ```
 
-## F. Comparaison échantillon vs données complètes
+## G. Comparaison échantillon vs données complètes
 
 ### Moyennes des variables numériques par cluster
 
@@ -228,7 +240,7 @@ for (col in names(df)[cat_cols]) {
 }
 ```
 
-## G. Visualisation des clusters k-prototypes
+## H. Visualisation des clusters k-prototypes
 
 ```{r}
 library(ggplot2)
@@ -276,7 +288,7 @@ colnames(mds_df) <- c("Dim1", "Dim2")
 fviz_cluster(list(data = mds_df, cluster = res_k3$cluster),
              geom = "point", palette = viridis(3), ellipse.type = "convex",
              show.clust.cent = TRUE, ggtheme = theme_minimal(),
-             main = "Visualisation des clusters") +
+             ) +
   theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 
 ggsave("../Figures/clusters_fviz_final.png", width = 10, height = 8, dpi = 300)
@@ -284,46 +296,50 @@ ggsave("../Figures/clusters_fviz_final.png", width = 10, height = 8, dpi = 300)
 
 Les groupes peuvent se chevaucher car la visualisation 2D (via PCA) projette un espace multidimensionnel sur un simple plan. Cette réduction dimensionnelle entraîne une perte d'information, et des clusters bien séparés dans l'espace original peuvent alors apparaître mélangés sur le graphique.
 
-## H. Inteprétation de chaque cluster
+## I. Inteprétation de chaque cluster
 
-### Cluster 1 : Accidents Urbains sous Intempéries
+### **Cluster 1 : Accidents routiers hors agglomération**
 
-Ce groupe se distingue quasi-exclusivement par des conditions météorologiques et de surface dégradées.
+-   **VMA moyenne** : 85.8 km/h (échantillon) / 48.3 km/h (données complètes)
 
--   **Conditions :** Forte prédominance de la pluie (légère ou forte) associée à une surface mouillée.
+-   **Localisation** : Majoritairement hors agglomération (99% dans l'échantillon, 56% dans les données complètes)
 
--   **Localisation :** Majoritairement en agglomération.
+-   **Éclairage** : Principalement en plein jour (56%) et nuit sans éclairage (27%)
 
--   **Véhicules impliqués :** Une surreprésentation notable des transports en commun, suggérant des problématiques de freinage ou d'adhérence impliquant des véhicules lourds dans un trafic dense.
+-   **Conditions atmosphériques** : Normales (76%)
 
--   **Cinétique :** Vitesse moyenne faible.
+-   **Type de collision** : Diversifié - collisions par le côté (18%), par l'arrière (18%), et accidents sans collision (15%)
 
-### Cluster 2 : Accidents de Flux Urbain
+-   **Profil type** : Accidents sur routes hors agglomération, souvent à vitesse élevée, en conditions normales de jour ou la nuit sans éclairage public.
 
-Il s'agit du segment le plus volumineux, représentant l'accidentologie "quotidienne" en ville par conditions normales.
+### **Cluster 2 : Accidents routiers à haute cinétique**
 
--   **Configuration :** Exclusivement en agglomération, concentré sur les intersections (carrefours, giratoires) avec une prédominance de chocs latéraux (refus de priorité, changements de file).
+-   **VMA moyenne** : 41.8 km/h (échantillon) / 87.3 km/h (données complètes)
 
--   **Usagers Vulnérables :** Forte implication des deux-roues (vélos et motos).
+-   **Localisation** : Très majoritairement hors agglomération (96% données complètes)
 
--   **Conditions :** Environnement favorable (plein jour, météo normale, surface sèche).
+-   **Éclairage** : Forte proportion de nuit sans éclairage (29% données complètes) et plein jour (56%)
 
--   **Cinétique :** Vitesse moyenne la plus basse des trois groupes.
+-   **Conditions atmosphériques** : Normales (76%)
 
-### Cluster 3 : Accidents Routiers à Haute Cinétique
+-   **Type de collision** : Surtout "autre" (26%), collisions en chaîne (7%) et par l'arrière (18%)
 
-Ce cluster regroupe les accidents hors agglomération, caractérisés par une dangerosité potentielle accrue due à la vitesse.
+-   **Profil type** : Accidents sur routes rapides hors agglomération (voies express, nationales), caractérisés par des vitesses élevées et souvent en conditions de faible visibilité nocturne.
 
--   **Localisation :** Routes départementales et autoroutes (hors agglomération).
+### **Cluster 3 : Accidents urbains**
 
--   **Facteurs aggravants :** Surreprésentation des accidents nocturnes ("Nuit sans éclairage") et des tracés en courbe.
+-   **VMA moyenne** : 49.0 km/h (échantillon) / 42.2 km/h (données complètes)
 
--   **Typologie :** Nombreuses pertes de contrôle (sorties de route sur accotement) ou chocs frontaux.
+-   **Localisation** : Très majoritairement en agglomération (97% échantillon, 93% données complètes)
 
--   **Véhicules :** Implication majeure des véhicules légers et poids lourds ; absence quasi-totale d'usagers vulnérables (piétons/vélos).
+-   **Éclairage** : Principalement nuit avec éclairage allumé (66% données complètes) et plein jour (12%)
 
--   **Cinétique :** Vitesse moyenne très élevée.
+-   **Conditions atmosphériques** : Normales (72%)
 
-## I. Conclusion
+-   **Type de collision** : Dominé par les collisions par le côté (61% échantillon) et "autre" (62% données complètes)
 
-L'algorithme K-prototypes a identifié trois groupes d'accidents distincts en combinant variables numériques et catégorielles. Cette segmentation permet d'analyser les différents profils d'accidents et d'identifier les facteurs de risque spécifiques à chaque groupe.
+-   **Profil type** : Accidents urbains à vitesse modérée, survenant souvent la nuit en zone éclairée, avec une prédominance de collisions latérales aux intersections.
+
+## J. Conclusion
+
+L'algorithme K-prototypes a identifié trois groupes d'accidents distincts en se basant sur les variables contextuelles (localisation, conditions d'éclairage, conditions atmosphériques, type de collision, vitesse maximale autorisée). Cette sélection de variables a permis d'obtenir le meilleur indice de qualité de clustering, offrant ainsi une segmentation optimale pour analyser les différents profils d'accidents et identifier les facteurs de risque spécifiques à chaque groupe.
