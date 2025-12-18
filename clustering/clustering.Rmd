@@ -194,12 +194,6 @@ Bien que $k=2$ offre la meilleure qualité statistique avec des clusters très c
 table(res_k3$cluster)
 ```
 
-L'analyse des clusters montre que les quatres groupes identifiés présentent des tailles différentes. Le cluster 2 regroupe la majorité des observations, tandis que le cluster 1 correspond a un petit sous-groupe spécifique. Les clusters 3 occupe une taille intermédiaire.
-
-Cette répartition révèle l'existence de groupes homogènes mais de taille variées, permettant d'identifier et d'interpéter les profils distincts propres à chaque cluster.
-
-*Remarque : Ces effectifs varient selon l'échantillon sélectionné.*
-
 ## F. Comparaison échantillon vs données complètes
 
 ### Moyennes des variables numériques par cluster
@@ -332,6 +326,4 @@ Ce cluster regroupe les accidents hors agglomération, caractérisés par une da
 
 ## I. Conclusion
 
-L'algorithme K-prototypes a identifié quatre groupes d'accidents distincts en combinant variables numériques et catégorielles. Cette segmentation permet d'analyser les différents profils d'accidents et d'identifier les facteurs de risque spécifiques à chaque groupe.
-
-Ces résultats dépendent de l'échantillon sélectionné et pourraient varier avec un échantillonnage différent.
+L'algorithme K-prototypes a identifié trois groupes d'accidents distincts en combinant variables numériques et catégorielles. Cette segmentation permet d'analyser les différents profils d'accidents et d'identifier les facteurs de risque spécifiques à chaque groupe.
