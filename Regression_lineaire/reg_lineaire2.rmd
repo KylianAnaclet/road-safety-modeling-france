@@ -354,6 +354,11 @@ plot(modele2)
 Les points suivent désormais presque parfaitement la droite normale. Cela signifie que l'hypothèse de normalité des résidus est respectée.
 
 ```{r}
+obs_47872 <- df[47872,]
+summary(obs_47872)
+```
+
+```{r}
 hist(resid(modele2), 
      breaks = 20, 
      col = "lightblue", 
