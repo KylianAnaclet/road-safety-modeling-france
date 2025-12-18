@@ -172,7 +172,7 @@ L'algorithme répète trois étapes jusqu'à stabilisation. Chaque observation e
 
 \subsection{Préparation des données}
 
-Afin d'optimiser le temps de calcul, l'analyse repose sur un échantillonnage aléatoire de n=1000 observations et une sélection rigoureuse de variables contextuelles (météo, infrastructure, etc.), excluant les indicateurs de gravité ou de localisation. Les variables numériques ont ensuite été standardisées par centrage-réduction pour assurer une contribution équilibrée dans les mesures de distance, tandis que les variables catégorielles ont été conservées telles quelles.
+Afin d'optimiser le temps de calcul, l'analyse repose sur un échantillonnage aléatoire de n=5000 observations et une sélection rigoureuse de variables contextuelles (localisation, conditions d’éclairage, conditions atmosphériques, type de collision, vitesse maximale autorisée), excluant les indicateurs de gravité ou de localisation. Les variables numériques ont ensuite été standardisées par centrage-réduction pour assurer une contribution équilibrée dans les mesures de distance, tandis que les variables catégorielles ont été conservées telles quelles.
 
 \subsection{Diagnostic du regroupement et détermination du nombre optimal de clusters}
 \subsubsection{Évaluation de la tendance au regroupement}
@@ -193,17 +193,18 @@ La détermination du nombre optimal de clusters s'est appuyée sur la méthode d
 Le partitionnement final montre une répartition inégale entre les trois clusters, reflétant la fréquence des différents types d'accidents. Cette distribution permet d'identifier à la fois les accidents les plus courants et ceux qui présentent des caractéristiques moins fréquentes.
 
 \subsubsection{Profils types identifiés}
-\textbf{Cluster 1} : Accidents Urbains sous Intempéries
-Ce groupe rassemble les accidents en agglomération survenant principalement sous la pluie avec chaussée mouillée, impliquant fréquemment des transports en commun à vitesse réduite.
 
-\textbf{Cluster 2} : Accidents de Flux Urbain
-Ce groupe, le plus important, regroupe les accidents quotidiens en ville aux intersections par temps normal, impliquant principalement des deux-roues et caractérisés par des chocs latéraux à faible vitesse.
+\textbf{Cluster 1 : Accidents Routiers Hors Agglomération Diurnes} : 
+Ce groupe rassemble les accidents hors agglomération survenant principalement de jour ou la nuit sans éclairage public, en conditions atmosphériques normales. Les accidents présentent des configurations variées (collisions latérales, par l'arrière, ou sans collision) sur des routes à vitesse élevée.
 
-\textbf{Cluster 3} : Accidents Routiers à Haute Cinétique
-Ce groupe concentre les accidents hors agglomération sur routes et autoroutes, survenant souvent la nuit ou en courbe, avec des pertes de contrôle et chocs frontaux à vitesse élevée impliquant véhicules légers et poids lourds.
+\textbf{Cluster 2 : Accidents Routiers à Haute Cinétique}  :
+Ce groupe concentre les accidents hors agglomération sur routes rapides et autoroutes à vitesse maximale élevée (87 km/h en moyenne), survenant fréquemment la nuit sans éclairage ou en plein jour. Les configurations d'accidents sont diverses, incluant des collisions en chaîne et par l'arrière, caractéristiques des voies à forte circulation.
+
+\textbf{Cluster 3 : Accidents Urbains Nocturnes} :
+Ce groupe, majoritairement en agglomération, regroupe les accidents survenant principalement la nuit en zone éclairée, à vitesse modérée (42-49 km/h). Les collisions latérales dominent, typiques des intersections urbaines, dans des conditions atmosphériques généralement normales.
 
 \subsubsection{Qualité et validation du clustering}
-L'évaluation quantitative du modèle, avec un coefficient de silhouette moyen de 0.117, atteste de la pertinence de la segmentation malgré la complexité intrinsèque des données d'accidentologie. Ce résultat positif confirme que le modèle capture une structure réelle, même si les faibles valeurs de l'indice de Dunn (0.025) rappellent que les frontières entre les types d'accidents sont naturellement fluides plutôt que strictes. Dans le détail, la meilleure performance du Cluster 3 (0.173) valide notre capacité à isoler nettement le profil routier à haute cinétique. Les scores plus resserrés des clusters urbains (1 et 2) reflètent logiquement la continuité des situations de conduite en ville, où les contextes se chevauchent souvent sans nuire à la cohérence de l'interprétation globale.
+L'évaluation quantitative du modèle, avec un coefficient de silhouette moyen de 0.2677, atteste de la pertinence de la segmentation malgré la complexité intrinsèque des données d'accidentologie. Ce résultat positif confirme que le modèle capture une structure réelle, même si la faible valeur de l'indice de Dunn (0.001133) rappelle que les frontières entre les types d'accidents sont naturellement fluides plutôt que strictes. Dans le détail, la meilleure performance du Cluster 2 (0.3107) valide notre capacité à isoler nettement le profil routier à haute cinétique sur les voies rapides hors agglomération. Le Cluster 1 présente un score intermédiaire (0.2861), reflétant la diversité des configurations d'accidents hors agglomération en conditions diurnes. Le Cluster 3, avec le score le plus faible (0.2277), traduit la complexité du milieu urbain nocturne où les contextes d'accidents aux intersections se chevauchent naturellement, sans nuire à la cohérence de l'interprétation globale.
 
 \subsubsection{Visualisation et séparation}
 La projection des clusters en deux dimensions par ACP permet de visualiser le partitionnement. Les chevauchements observés sont dus à la réduction dimensionnelle, mais dans l'espace d'origine, les clusters sont bien mieux séparés.
