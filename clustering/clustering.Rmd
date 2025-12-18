@@ -32,60 +32,35 @@ La minimisation est réalisée automatiquement par la fonction `kproto()` à tra
 Le jeu de données final étant **très volumineux**, un échantillon aléatoire a été extrait pour faciliter le traitement et le clustering.
 
 ```{r}
-set.seed(123)
-n_sample <- 1000
+if(!require(dplyr)) install.packages("dplyr")
+library(dplyr)
+
+set.seed(321)
+n_sample <- 5000
 
 # Exécuter le script « nettoyage_donnees_clustering.Rmd », situé dans le dossier clustering, afin de générer le fichier « donnees_clustering.csv ».
 df <- read.csv("../data/donnees_clustering.csv")
+df_complete <- df %>% 
+  mutate(across(where(is.character), as.factor)) %>%
+  select(agg, lum, atm, col, vma)
 
-# On enlève les variables non utiles pour le clustering (décommentez une des lignes suivantes)
-#df <- subset(df, select = -c(Region, Moment))
-df <- subset(df, select = -c(Region, Moment, nb_tue, nb_hospitalise, nb_blesse, nb_indemne))
+# Convertir toutes les variables de type character en factor
+# Puis sélectionner uniquement les 5 variables retenues pour le clustering
+df <- df %>% 
+  mutate(across(where(is.character), as.factor)) %>%
+  select(agg, lum, atm, col, vma)
 
 # On tire par hasard 1000 accidents
 df <- df[sample(nrow(df), n_sample), ]
 ```
 
-On n’inclut pas ces variables :
-
--   **Region :** Son inclusion forcerait les clusters à se former principalement par région plutôt que par les caractéristiques réelles des accidents.
-
--   **Moment :** Cette variable est redondante avec `lum` (conditions d'éclairage).
-
--   **nb_tue, nb_hospitalise, nb_blesse, nb_indemne :** On les exclut du clustering car ce sont des résultats (gravité de l’accident).
-
-Identifier les variables de type character et les convertir en facteurs.
-
-```{r}
-if(!require(dplyr)) install.packages("dplyr")
-library(dplyr)
-
-df <- df %>% mutate(across(where(is.character), as.factor))
-```
-
-Avant d'appliquer l'algorithme K-prototypes, il est nécessaire de :
-
--   Vérifier que toutes les variables catégorielles sont bien des facteurs.
-
--   Vérifier que toutes les variable numériques sont bien des numériques.
+On sélectionne ces 5 variables (agg, lum, atm, col, vma) car elles capturent les conditions principales de l’accident (localisation, luminosité, météo, type de collision et vitesse autorisée) et donnent les meilleurs résultats de clustering.
 
 ```{r}
 str(df)
 ```
 
-## B. Normalisation des variables numériques
-
-Les variables numériques sont standardisées pour garantir que toutes contribuent équitablement au calcul des distances, indépendamment de leur échelle de mesure. Cela évite qu'une variable avec de grandes valeurs domine artificiellement la formation des clusters.
-
-```{r}
-numeric_cols <- sapply(df, is.numeric)
-df_scaled <- df
-df_scaled[numeric_cols] <- scale(df[numeric_cols])
-```
-
-*Remarque : les variables catégorielles (facteurs) ne sont pas standardisées.* Évaluation de la tendance à former des clusters :
-
-## C. Verification de la légitimité de clustering
+## B. Verification de la légitimité de clustering
 
 Avant de commencer on doit tout d'abord s'assurer que l'utilisation de la méthode de clustering est légitime ici (s'assurer que les données ne sont pas réparties de façon homogène). Pour ce faire on utilise la méthode statistique en calculant la statistique de Hopkins calculé avec la formule :
 
@@ -93,7 +68,7 @@ $$
 H = \frac{\sum_{i=1}^{n}{x_i}}{\sum_{i=1}^{n}{x_i}+\sum_{i=1}^{n}{y_i}}
 $$
 
-avec
+où :
 
 -   $x_i$ la distance d'un i-éme point $p_i$ choisi aléatoirement dans notre distribution à tster avec son plus proche voisin dans la même distribution
 
@@ -106,9 +81,19 @@ Nos hypothèses étant :
 -   $H_1$ **:** Les données ne sont pas uniformément distribués
 
     ```{r}
+    if(!require(hopkins)) install.packages("hopkins")
     library(hopkins)
 
-    hopkins(df_scaled[, numeric_cols])
+    numeric_cols <- sapply(df, is.numeric)
+    n_numeric <- sum(numeric_cols)
+
+    if (n_numeric >= 2) {
+      h_stat <- hopkins(df[, numeric_cols])
+      cat("Statistique de Hopkins :", round(h_stat, 4), "\n")
+    } else {
+      cat("Hopkins non calculable : seulement", n_numeric, "variable numérique (vma).\n")
+      cat("   (La fonction nécessite au moins 2 variables numériques)\n")
+    }
     ```
 
 ## C. Choix du nombre de clusters (k)
@@ -116,7 +101,7 @@ Nos hypothèses étant :
 On applique l'algorithme k-prototypes pour différentes valeurs de k.
 
 ```{r}
-set.seed(1)
+set.seed(321)
 if(!require(clustMixType)) install.packages("clustMixType")
 if(!require(cluster)) install.packages("cluster")
 library(clustMixType)
@@ -131,7 +116,7 @@ d <- daisy(df, metric = "gower")
 
 # Exécuter k-prototypes pour différentes valeurs de k
 for (k in 2:k_max) {
-  kp <- kproto(df_scaled, k, verbose = FALSE)
+  kp <- kproto(df, k, verbose = FALSE)
   cost[k] <- kp$tot.withinss
   
   sil <- silhouette(kp$cluster, d)
@@ -153,90 +138,20 @@ plot(2:k_max, sil_avg[2:k_max],
 
 ### Observations
 
-Le graphique de la méthode du coude montre que la courbe se stabilise à k = 6, tandis que la silhouette présente deux maxima à k = 2 et k = 3.
+La méthode du coude montre une stabilisation à partir de k = 4, tandis que l’indice de Silhouette est maximal à k = 2.
 
-*Remarque : Ces résultats dépendent fortement de l'échantillon tiré. Avec un autre échantillon aléatoire, les courbes du coude et de la silhouette pourraient suggérer un nombre de clusters différent.*
+Pour choisir le meilleur k, nous testons k = 2, 3 et 4 en comparant leurs indices de qualité.
 
 ## D. Application de k-prototypes et analyse des résultats
 
 ```{r}
-set.seed(1)
-library(clustMixType)
-
-res <- kproto(df_scaled, k = 3, verbose = FALSE)
-clusters <- res$cluster
+set.seed(321)
+res_k2 <- kproto(df, k = 2, verbose = FALSE)
+res_k3 <- kproto(df, k = 3, verbose = FALSE)
+res_k4 <- kproto(df, k = 4, verbose = FALSE)
 ```
 
-#### Distribution des observations par cluster
-
-```{r}
-table(clusters)
-```
-
-L'analyse des clusters montre que les quatres groupes identifiés présentent des tailles différentes. Le cluster 2 regroupe la majorité des observations, tandis que le cluster 1 correspond a un petit sous-groupe spécifique. Les clusters 3 occupe une taille intermédiaire.
-
-Cette répartition révèle l'existence de groupes homogènes mais de taille variées, permettant d'identifier et d'interpéter les profils distincts propres à chaque cluster.
-
-*Remarque : Ces effectifs varient selon l'échantillon sélectionné.*
-
-### Moyennes des variables numériques par cluster
-
-```{r}
-# Sélectionner uniquement les colonnes numériques
-numeric_df <- df[, sapply(df, is.numeric)]
-numeric_df$clusters <- clusters
-
-aggregate(. ~ clusters, data = numeric_df, FUN = mean)
-```
-
-### **Répartition des variables catégorielles par cluster**
-
-```{r}
-cat_cols <- sapply(df, is.factor)
-
-for (col in names(df)[cat_cols]) {
-  cat("\nVariable :", col, "\n")
-  print(table(df[[col]], clusters))
-}
-```
-
-## E. Visualisation des clusters k-prototypes
-
-```{r}
-if(!require(factoextra)) install.packages("factoextra")
-if(!require(viridis)) install.packages("viridis")
-library(factoextra)
-library(viridis)
-
-clusters <- res$cluster
-
-num_cols <- sapply(df_scaled, is.numeric)
-df_num <- df_scaled[, num_cols]
-
-p <- fviz_cluster(list(data = df_num, cluster = clusters),
-             geom = "point",
-             palette = viridis(3), 
-             ellipse.type = "convex",
-             repel = TRUE,
-             show.clust.cent = TRUE,
-             ggtheme = theme_minimal(), 
-             main = "Visualisation des clusters")
-p
-# Export the plot
-ggsave(
-  filename = "../Figures/clusters_visualisation.png",
-  plot = p,
-  width = 8,
-  height = 6,
-  dpi = 300
-)
-```
-
-### Observations
-
-Les groupes peuvent se chevaucher car la visualisation 2D (via PCA) projette un espace multidimensionnel sur un simple plan. Cette réduction dimensionnelle entraîne une perte d'information, et des clusters bien séparés dans l'espace original peuvent alors apparaître mélangés sur le graphique.
-
-## F. Test de la qualité du clustering :
+## E. Test de la qualité du clustering
 
 Afin d'évaluer la qualité du clustering on évalue les deux indices :
 
@@ -251,33 +166,131 @@ Afin d'évaluer la qualité du clustering on évalue les deux indices :
     De plus on veille à adapter cette methode d'évaluation à la methode de clustering utilisée (k-prototype) et ce en utilisant justement la distance de gower qui prend en compte les variables catégorielles
 
 ```{r}
-library(cluster)  # Pour daisy et silhouette
-library(fpc)      # Pour cluster.stats (Dunn)
+if(!require(fpc)) install.packages("fpc")
+library(cluster)
+library(fpc)
 
-
-# Calcul de la matrice de distance de Gower 
 dist_gower <- daisy(df, metric = "gower")
 
-# On croise la distance réelle (Gower) avec les clusters existants
-sil_obj <- silhouette(clusters, dist_gower)
+evaluer_k <- function(res, k_val) {
+  cat("=== k =", k_val, "===\n")
+  sil <- silhouette(res$cluster, dist_gower)
+  cat("Silhouette moyenne :", round(mean(sil[,3]), 4), "\n")
+  cat("Détail :", paste(round(summary(sil)$clus.avg.widths, 4), collapse = ", "), "\n")
+  dunn <- cluster.stats(dist_gower, res$cluster)$dunn
+  cat("Dunn :", round(dunn, 6), "\n\n")
+}
 
-# Affichage des résultats Silhouette
-cat("Score de Silhouette Moyen :", summary(sil_obj)$avg.width, "\n")
-
-stats_clusters <- cluster.stats(d = dist_gower, clustering = clusters)
-
-cat("Indice de Dunn :", stats_clusters$dunn, "\n")
-
-# On affiche l'indice silouhette pour chaque cluster pour identifier les clusters 'les mieux formés'
-print("Détail par cluster (Silhouette) :")
-summary(sil_obj)$clus.avg.widths
+evaluer_k(res_k2, 2)
+evaluer_k(res_k3, 3)
+evaluer_k(res_k4, 4)
 ```
 
-Bien que les indicateurs statistiques reflètent la grande complexité des données d'accidentologie, ils confirment la **cohérence globale** de la partition. Le score de silhouette positif indique que les observations sont, en moyenne, bien classées malgré la nature continue du phénomène accidentel qui rend les frontières entre groupes naturellement diffuses.
+Bien que $k=2$ offre la meilleure qualité statistique avec des clusters très cohérents, une partition en seulement deux groupes est trop simpliste pour refléter la diversité des accidents routiers. Nous retenons donc $k=3$, qui propose trois profils plus nuancés et interprétables, malgré une qualité statistique légèrement moindre.
 
-Dans le détail, le **Cluster 3** se détache avec la meilleure stabilité, validant l'identification d'un profil "routier" spécifique.
+#### Distribution des observations par cluster
 
-## E. Inteprétation de chaque cluster :
+```{r}
+table(res_k3$cluster)
+```
+
+L'analyse des clusters montre que les quatres groupes identifiés présentent des tailles différentes. Le cluster 2 regroupe la majorité des observations, tandis que le cluster 1 correspond a un petit sous-groupe spécifique. Les clusters 3 occupe une taille intermédiaire.
+
+Cette répartition révèle l'existence de groupes homogènes mais de taille variées, permettant d'identifier et d'interpéter les profils distincts propres à chaque cluster.
+
+*Remarque : Ces effectifs varient selon l'échantillon sélectionné.*
+
+## F. Comparaison échantillon vs données complètes
+
+### Moyennes des variables numériques par cluster
+
+```{r}
+library(clustMixType)
+
+# Moyennes vma
+cat("Moyenne vma sur l'échantillon :\n")
+print(round(tapply(df$vma, res_k3$cluster, mean), 1))
+
+res_full <- kproto(df_complete, k = 3, verbose = FALSE)
+cat("\nMoyenne vma sur les données complètes :\n")
+print(round(tapply(df_complete$vma, res_full$cluster, mean), 1))
+```
+
+### **Répartition des variables catégorielles par cluster**
+
+```{r}
+cat_cols <- sapply(df, is.factor)
+
+for (col in names(df)[cat_cols]) {
+  cat("\n=== Variable :", col, "===\n\n")
+  
+  cat("Échantillon :\n")
+  print(table(df[[col]], res_k3$cluster))
+  
+  cat("\nDonnées complètes :\n")
+  print(table(df_complete[[col]], res_full$cluster))
+  
+  cat("\n")
+}
+```
+
+## G. Visualisation des clusters k-prototypes
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(scales)  # Pour percent()
+
+df_vis <- df %>% mutate(cluster = as.factor(res_k3$cluster))
+
+p1 <- ggplot(df_vis, aes(x = cluster, y = vma, fill = cluster)) +
+  geom_boxplot() + theme_minimal() + theme(legend.position = "none") +
+  labs(title = "Vitesse maximale autorisée", x = "Cluster", y = "vma (km/h)")
+
+p2 <- ggplot(df_vis, aes(x = cluster, fill = agg)) + geom_bar(position = "fill") +
+  scale_y_continuous(labels = percent) + theme_minimal() +
+  labs(title = "Localisation", x = "Cluster", y = "Proportion")
+
+p3 <- ggplot(df_vis, aes(x = cluster, fill = lum)) + geom_bar(position = "fill") +
+  scale_y_continuous(labels = percent) + theme_minimal() +
+  labs(title = "Luminosité", x = "Cluster", y = "Proportion")
+
+p4 <- ggplot(df_vis, aes(x = cluster, fill = atm)) + geom_bar(position = "fill") +
+  scale_y_continuous(labels = percent) + theme_minimal() +
+  labs(title = "Conditions atmosphériques", x = "Cluster", y = "Proportion")
+
+p5 <- ggplot(df_vis, aes(x = cluster, fill = col)) + geom_bar(position = "fill") +
+  scale_y_continuous(labels = percent) + theme_minimal() +
+  labs(title = "Type de collision", x = "Cluster", y = "Proportion")
+p1
+p2
+p3
+p4
+p5
+```
+
+```{r}
+set.seed(321)
+library(cluster)
+library(factoextra)
+library(viridis)
+
+mds_df <- cmdscale(dist_gower, k = 2) %>% as.data.frame()
+colnames(mds_df) <- c("Dim1", "Dim2")
+
+fviz_cluster(list(data = mds_df, cluster = res_k3$cluster),
+             geom = "point", palette = viridis(3), ellipse.type = "convex",
+             show.clust.cent = TRUE, ggtheme = theme_minimal(),
+             main = "Visualisation des clusters") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+ggsave("../Figures/clusters_fviz_final.png", width = 10, height = 8, dpi = 300)
+```
+
+Les groupes peuvent se chevaucher car la visualisation 2D (via PCA) projette un espace multidimensionnel sur un simple plan. Cette réduction dimensionnelle entraîne une perte d'information, et des clusters bien séparés dans l'espace original peuvent alors apparaître mélangés sur le graphique.
+
+## H. Inteprétation de chaque cluster
 
 ### Cluster 1 : Accidents Urbains sous Intempéries
 
@@ -317,7 +330,7 @@ Ce cluster regroupe les accidents hors agglomération, caractérisés par une da
 
 -   **Cinétique :** Vitesse moyenne très élevée.
 
-## G. Conclusion
+## I. Conclusion
 
 L'algorithme K-prototypes a identifié quatre groupes d'accidents distincts en combinant variables numériques et catégorielles. Cette segmentation permet d'analyser les différents profils d'accidents et d'identifier les facteurs de risque spécifiques à chaque groupe.
 
