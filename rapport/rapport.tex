@@ -82,12 +82,12 @@ Notre définition du Score de Sévérité est une pondération du nombre de pers
     Score\_Severite = \alpha \times nb\_Tue + \beta \times nb\_Hospitalise + \gamma \times nb\_Blesse + \delta \times nb\_Indemne.
 \]
 Avec $\alpha$, $\beta$, $\gamma$, $\delta$ des coefficients choisis de manière à refléter la gravité relative des blessures. Pour ce faire, nous nous sommes inspiré de l'échelle AIS (Abbreviated Injury Scale) qui quantifie la gravité des lésions. On obtient ainsi: $\alpha = 6$, $\beta = 3$, $\gamma = 1$, $\delta = 0$. Ces coefficients attribuent un poids 6 fois plus important aux décès qu'aux blessés légers, et 3 fois plus aux blessés hospitalisés. Nous considérons que le nombre de personnes indemne ne doit pas avoir d'influence sur ce score car selon nous, son nombre n'est pas lié à la sévérité d'un accident. \\
-\begin{figure}[h]
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=0.75\linewidth]{pie_score_severite.png}
+    \includegraphics[width=0.75\linewidth]{pie_plot_sans_titre.png}
     \caption{Répartition des accidents par Score de Sévérité (Données ONISR 2021)}
     \label{fig:placeholder}
-\end{figure}
+\end{figure}\\
 La Figure 1 met en évidence une distribution asymétrique du score de sévérité.
 En effet, 62.3\% des accidents ont un score de sévérité compris entre 0 et 2; et 9.6\% des accidents ont un score de sévérité supérieur ou égal à 5. De même, selon le résumé de cette variable sur R, 50\% des accidents ont un score de sévérité inférieur ou égal à 1 et le score de sévérité moyen des accidents est de 2. Cette caractéristique du score de sévérité motivera l'utilisation d'une transformation logarithmique sur celui-ci dans la suite de l'analyse.
 
@@ -124,14 +124,14 @@ la variable réponse d’une loi normale. Le coefficient de détermination augme
 Les hypothèses de normalité des résidus apparaissent également mieux respectées au vu
 du QQ-plot. \\
 Enfin, dans un troisième modèle, nous avons retiré trois variables (\textit{'surf', 'prof' et 'circ'})
-dont les coefficients n’étaient pas statistiquement significatifs au seuil de 5\% selon les tests de Student (hypothèse nulle de coefficient nul non rejetée). Ce choix permet de simplifier le modèle sans dégrader ses performances, le coefficient de détermination restant proche de celui du second modèle, avec \boldmath \(R^2 = 23{,}3\%\) \unboldmath.
+dont les coefficients n’étaient pas statistiquement significatifs au seuil de 5\% selon les tests de Student (hypothèse nulle de coefficient nul non rejetée). Ce choix permet de simplifier le modèle sans dégrader ses performances, le coefficient de détermination restant proche de celui du second modèle, avec \boldmath \(R^2 = 23{,}3\%\). \unboldmath
 
 \subsection{Interprétation des résultats}
 \subsubsection{Les facteurs les plus influents}
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.8\linewidth]{facteurs_severite.png}
+    \includegraphics[width=0.8\linewidth]{facteurs_sans_legende.png}
     \caption{Facteurs les plus influents sur la gravité d'un accident}
     \label{fig:placeholder}
 \end{figure}
@@ -152,9 +152,9 @@ sans collision. \\
 Enfin, bien qu’il n’apparaisse pas dans la Figure 2 car il s'agit d'une variable quantitative (et non catégorielle), son impact reste significatif: la présence d’un camion supplémentaire impliqué dans un
 accident augmente le score de sévérité d’environ 10\%. \\
 \textit{\textbf{Important:} Ces interprétations sont effectuées toutes choses égales par ailleurs et la gravité de l’accident est évaluée uniquement à partir du Score de Sévérité défini en Section 1.1.}
-\subsubsection{Conclusion}
+\subsubsection{Limites}
 
-En conclusion, bien que nous arrivons à mettre en évidence les facteurs les plus influents dans le cadre de nos données, notre modèle présente un pouvoir explicatif modeste (\boldmath \(R^2 = 23{,}6\%\)) \unboldmath, reflétant la complexité multifactorielle de l'accidentologie. Ainsi, dans le cadre de notre modèle, plusieurs limites sont à prendre en compte. \\
+Finalement, bien que nous arrivons à mettre en évidence les facteurs les plus influents dans le cadre de nos données, notre modèle présente un pouvoir explicatif modeste (\boldmath \(R^2 = 23{,}6\%\))\unboldmath, reflétant la complexité multifactorielle de l'accidentologie. Ainsi, dans le cadre de notre modèle, plusieurs limites sont à prendre en compte. \\
 Premièrement, les données ONISR ne contiennent pas d'information sur l'alcoolémie, l'usage du téléphone, ou la fatigue qui peuvent être des facteurs primordiaux à prendre en compte dans la sévérité d'un accident.
 Ensuite, notre modèle identifie des associations, mais ne peut établir de relations causales strictes entre les variables et la sévérité d'un accident.
 Enfin, bien que la transformation logarithmique améliore l'adéquation du modèle aux hypothèses de régression linéaire, la normalité des résidus ainsi que sa variance constante ne sont pas totalement vérifiés, pouvant altérer les tests statistiques.
@@ -163,12 +163,12 @@ Enfin, bien que la transformation logarithmique améliore l'adéquation du modè
 
 
 \section{Méthode de partitionnement : K-prototypes}
-
+Nous allons désormais nous concentrer sur la méthode de partitionnement [1] dans le but de regrouper les profils d'accidents.
 L'algorithme K-prototypes combine la distance euclidienne pour les variables numériques et une mesure de dissimilarité pour les variables catégorielles. Il minimise la fonction objective suivante :
 $$\min_{c_1,...,c_K} \sum_{k=1}^{K} \sum_{i, G(i)=k} \left[ d_{num}(x_i^{num}, c_k^{num}) + \gamma \cdot d_{cat}(x_i^{cat}, c_k^{cat}) \right]$$
 où $d_{num}$ et $d_{cat}$ représentent respectivement les distances pour les variables numériques et catégorielles, et $\gamma$ équilibre leur importance.
 
-L'algorithme répète trois étapes jusqu'à stabilisation. Chaque observation est assignée au cluster le plus proche. Les prototypes sont recalculés avec la moyenne pour les variables numériques et le mode pour les catégorielles. Le processus s'arrête lorsque les clusters ne changent plus.
+L'algorithme répète trois étapes jusqu'à convergence. Chaque observation est assignée au cluster le plus proche. Les prototypes sont recalculés avec la moyenne pour les variables numériques et le mode pour les catégorielles. Le processus s'arrête lorsque les clusters ne changent plus.
 
 \subsection{Préparation des données}
 
@@ -177,12 +177,15 @@ Afin d'optimiser le temps de calcul, l'analyse repose sur un échantillonnage al
 \subsection{Diagnostic du regroupement et détermination du nombre optimal de clusters}
 \subsubsection{Évaluation de la tendance au regroupement}
 
-Avant le partitionnement, nous devons vérifier que les données ont naturellement tendance à former des groupes plutôt qu'à être distribuées uniformément. Cette vérification utilise la statistique de Hopkins :
+Avant le partitionnement, nous devons vérifier que les données ont naturellement tendance à former des groupes plutôt qu'à être distribuées uniformément. Cette vérification utilise la statistique de Hopkins [3]:
 $$ H = \frac{\sum_{i=1}^{n}{x_i}}{\sum_{i=1}^{n}{x_i}+\sum_{i=1}^{n}{y_i}} $$
 où $x_i$ mesure la distance entre un point réel et son plus proche voisin, et $y_i$ la distance entre un point généré aléatoirement et son plus proche voisin. Les scores obtenus, très proches de 1, confirment que les données présentent une structure de regroupement marquée.
 
-\subsubsection{Choix du nombre de clusters k}
-La détermination du nombre optimal de clusters s'est appuyée sur la méthode du coude et l'analyse de la silhouette. L'étude conjointe de ces indicateurs a conduit au choix de $k=3$ classes, un compromis idéal assurant une distinction nette des profils sans segmentation excessive (stabilisation de l'inertie et coefficient de silhouette satisfaisant).
+\subsubsection{Choix du nombre de clusters k}Dans cette étude, nous analysons la variabilité du nombre d’accidents corporels par unité d’ex-
+position afin d’identifier des facteurs de risque structurels. Pour cela, nous comparons deux modèles
+de fréquences issus des données de l’ONISR, qui diffèrent par leur échelle géographique et le facteur
+d’exposition utilisé.
+La détermination du nombre optimal de clusters s'est appuyée sur la méthode du coude [3] et l'analyse de la silhouette. L'étude conjointe de ces indicateurs a conduit au choix de $k=3$ classes, un compromis idéal assurant une distinction nette des profils sans segmentation excessive (stabilisation de l'inertie et coefficient de silhouette satisfaisant).
 
 \medskip
 \textit{\textbf{Note :} Bien que la composition exacte des groupes puisse légèrement varier selon l'échantillon, les profils principaux restent stables, ce qui confirme la pertinence du découpage obtenu.}
@@ -228,7 +231,7 @@ La projection des clusters (Figure 3) en deux dimensions par ACP permet de visua
 
 Dans cette étude, nous analysons la variabilité du nombre d'accidents corporels par unité d'exposition afin d'identifier des facteurs de risque structurels. Pour cela, nous comparons deux modèles de fréquences issus des données de l'ONISR, qui diffèrent par leur échelle géographique et le facteur d'exposition utilisé.
 
-Nous avons d'abord mis en œuvre une \textbf{approche généraliste} à l'échelle départementale (France entière), où le facteur d'exposition retenu est la population issue des données de l'INSEE (dataset \texttt{Df\_Pop\_brut}). Cette méthode, correspondant au fichier \texttt{Frequence.Rmd}, permet d'analyser un risque d'accident rapporté à la population, relevant ainsi d'une lecture de type santé publique. Parallèlement, nous avons développé une \textbf{approche de précision} à l'échelle communale, restreinte à la région Auvergne-Rhône-Alpes. Ici, le facteur d'exposition est le Trafic Moyen Journalier Annuel (TMJA) issu des comptages routiers (dataset \texttt{Df\_TMJA\_brut}). Cette seconde approche (\texttt{Frequence\_TMJA.Rmd}) vise à estimer un risque rapporté à l'usage réel de l'infrastructure routière, offrant une lecture plus fine du risque routier.
+Nous avons d'abord mis en œuvre une \textbf{approche généraliste} à l'échelle départementale (France entière), où le facteur d'exposition retenu est la population issue des données de l'INSEE [2] (dataset \texttt{Df\_Pop\_brut}). Cette méthode, correspondant au fichier \texttt{Frequence.Rmd}, permet d'analyser un risque d'accident rapporté à la population, relevant ainsi d'une lecture de type santé publique. Parallèlement, nous avons développé une \textbf{approche de précision} à l'échelle communale, restreinte à la région Auvergne-Rhône-Alpes. Ici, le facteur d'exposition est le Trafic Moyen Journalier Annuel (TMJA) [4] issu des comptages routiers (dataset \texttt{Df\_TMJA\_brut}). Cette seconde approche (\texttt{Frequence\_TMJA.Rmd}) vise à estimer un risque rapporté à l'usage réel de l'infrastructure routière, offrant une lecture plus fine du risque routier.
 
 À l’issue de ces deux approches, les données sont structurées sous la forme d’un jeu de données final (\texttt{df\_final}), regroupant les informations de l’ONISR ainsi que le nombre d’accidents normalisé par le facteur d’exposition retenu, servant de base à la modélisation statistique.
 
@@ -236,29 +239,27 @@ Nous avons d'abord mis en œuvre une \textbf{approche généraliste} à l'échel
 
 \subsubsection{Modèles linéaires généralisés et variables explicatives}
 
-Pour modéliser la variable de comptage $Y$ (nombre d'accidents), nous utilisons le cadre des Modèles Linéaires Généralisés (GLM). Ce type de modèle relie l'espérance de la variable cible $E(Y)$ à une combinaison linéaire des variables explicatives $X_i$ via une fonction de lien logarithmique. L'équation générale s'écrit :
-\begin{equation}
+Pour modéliser la variable de comptage $Y$ (nombre d'accidents), nous utilisons le cadre des Modèles Linéaires Généralisés (GLM). Ce type de modèle relie l'espérance de la variable cible $E(Y)$ à une combinaison linéaire des variables explicatives $X_i$ via une fonction de lien logarithmique. L'équation générale s'écrit [5] :
+\[
     \log(E(Y)) = \beta_0 + \sum_{i=1}^{p} \beta_i X_i + \text{offset}.
-\end{equation}
-
-L'offset est un terme dont le coefficient est contraint à 1. Il est fondamental ici car il permet de passer d'une modélisation en "nombre brut" à une modélisation en "taux". Ainsi, selon l'approche, l'exposition est soit la Population ($\log(\text{Pop})$), soit le Trafic ($\log(\text{TMJA})$).
+\]
+Dans cette formulation, $\beta_{0}$ représente la constante (\textit{intercept}) correspondant au niveau de risque de base, tandis que chaque coefficient $\beta_{i}$ mesure l'influence spécifique de la variable explicative $X_{i}$ associée (telle que la pluie ou le type de route) sur la fréquence attendue des accidents. L'offset est un terme dont le coefficient est contraint à 1~; il est fondamental ici car il permet de passer d'une modélisation en «~nombre brut~» à une modélisation en «~taux~». Ainsi, selon l'approche retenue, l'exposition est représentée soit par la population ($\log(\text{Pop})$), soit par le trafic ($\log(\text{TMJA})$).
 
 \subsubsection{Justification du modèle : De Poisson à la Binomiale Négative}
 
-Dans un premier temps, nous avons modélisé la fréquence des accidents par une régression de \textbf{Poisson}. L'évaluation de la pertinence de ce modèle repose sur deux indicateurs statistiques extraits des résultats. Le premier est la \textbf{Déviance}, qui quantifie l'écart entre les prédictions du modèle et les observations réelles pour mesurer l'ajustement global. Le second est l'\textbf{AIC} (Akaike Information Criterion), un critère de comparaison permettant de sélectionner le modèle offrant le meilleur compromis entre précision et complexité ; plus l'AIC est faible, meilleur est le modèle.
+Dans un premier temps, nous avons modélisé la fréquence des accidents par une régression de Poisson. L'évaluation de la pertinence de ce modèle repose sur deux indicateurs statistiques extraits des résultats. Le premier est la Déviance [5], qui quantifie l'écart entre les prédictions du modèle et les observations réelles pour mesurer l'ajustement global. Le second est l'AIC (Akaike Information Criterion), un critère de comparaison permettant de sélectionner le modèle offrant le meilleur compromis entre précision et complexité ; plus l'AIC est faible, meilleur est le modèle.
 
-\paragraph{Limites de Poisson et Surdispersion}
-La loi de Poisson repose sur une hypothèse restrictive d'équidispersion, imposant que la variance soit égale à l'espérance ($Var(Y) = E(Y)$). Or, nos données présentent une variance nettement supérieure à la moyenne, caractérisant une surdispersion qui suggère que des facteurs hétérogènes influencent fortement l'accidentologie. L'utilisation stricte de Poisson risquant de sous-estimer le risque d'erreur, nous avons opté pour la \textbf{Loi Binomiale Négative}. Ce modèle généralise celui de Poisson en ajoutant un paramètre de dispersion $\theta$, permettant de capter correctement cette variabilité excessive.
+
+La loi de Poisson repose sur une hypothèse restrictive d'équidispersion, imposant que la variance soit égale à l'espérance ($Var(Y) = E(Y)$). Or, nos données présentent une variance nettement supérieure à la moyenne, caractérisant une surdispersion qui suggère que des facteurs hétérogènes influencent fortement l'accidentologie. L'utilisation stricte de Poisson risquant de sous-estimer le risque d'erreur, nous avons opté pour la Loi Binomiale Négative [5]. Ce modèle généralise celui de Poisson en ajoutant un paramètre de dispersion $\theta$, permettant de capter correctement cette variabilité excessive.
 
 \subsection{Résultats et Interprétation}
 
 \subsubsection{Approche Généraliste (Population) : La preuve par la Déviance}
 
-Dans cette pemière approche, nous avons pris comme variable explicative : la pluie, les routes hors agglomération ainsi que les autouroutes et les départementales, les virages,  la vitesse moyenne sur l'ensemble des départements en utlisant la population comme offset
+Dans cette pemière approche, nous avons pris comme variable explicative : la pluie, les routes hors agglomération ainsi que les autouroutes et les départementales, les virages,  la vitesse moyenne sur l'ensemble des départements en utlisant la population comme offset.
 
 
 
-\paragraph{Échec du modèle de Poisson}
 Les résultats obtenus avec la loi de Poisson révèlent une inadéquation majeure avec les données. La déviance résiduelle atteint une valeur critique de \textbf{6695}, bien supérieure au nombre de degrés de liberté. Bien que le modèle Poisson réussisse à expliquer les accidents dans certains territoires, il échoue significativement dans les grandes métropoles telles que Paris (75), Lille (59) ou Marseille (13). Ce phénomène s'explique par la surdispersion, illustrée par le graphique des résidus ci-dessous.
 
 \begin{figure}[H]
@@ -268,17 +269,16 @@ Les résultats obtenus avec la loi de Poisson révèlent une inadéquation majeu
     \label{fig:surdispersion}
 \end{figure}
 
-L'analyse graphique montre que la majorité des points extrêmes se situent hors de la zone de confiance (entre les lignes rouges). Cela confirme que la variance augmente avec la moyenne, justifiant notre choix d'opter pour la méthode Binomiale Négative.
+La figure 4 met en évidence que la majorité des points extrêmes se situent hors de la zone de confiance (entre les lignes rouges). Cela confirme que la variance augmente avec la moyenne, justifiant notre choix d'opter pour la méthode Binomiale Négative.
 
-\paragraph{Apport de la Binomiale Négative}
-e passage à la loi Binomiale Négative permet de corriger ce biais structurel. En introduisant le paramètre de dispersion $\theta$, la déviance chute spectaculairement à environ \textbf{102}. Cette forte réduction de la déviance confirme que la loi Binomiale Négative est largement plus adaptée pour modéliser l'hétérogénéité des données d'accidents à cette échelle.
+Le passage à la loi Binomiale Négative permet de corriger ce biais structurel. En introduisant le paramètre de dispersion $\theta$, la déviance chute spectaculairement à environ \textbf{102}. Cette forte réduction de la déviance confirme que la loi Binomiale Négative est largement plus adaptée pour modéliser l'hétérogénéité des données d'accidents à cette échelle.
 En effet, concrètement, on trouve que l'analyse des ratios de taux d'incidence révèle que les virages et autoroutes multiplient par six le nombre d'accidents attendus, tandis que la pluie semble diviser ce risque par deux, ce qui suggère une adaptation comportementale et une vigilance accrue des usagers par temps dégradé.
 
 
 \subsubsection{Approche de Précision (TMJA) : Résultats et Interprétation}
 
 
-Dans cette seconde approche, les variables explicatives ne sont pas les mêmes que celle pour l'offset POpulation. En effet, étant donné que le dataset TMJA était très lourd, on s'est notamment penché ici à certains facteurs, à savoir la Pluie,  la Neige, la Nuit, les Virage le tout avec offset qui est égal à log(TMJA Moyen)
+Dans cette seconde approche, les variables explicatives ne sont pas les mêmes que celle pour l'offset Population. En effet, étant donné que le dataset TMJA était très lourd, on s'est notamment penché ici à certains facteurs, à savoir la Pluie,  la Neige, la Nuit, les Virage le tout avec offset qui est égal à log(TMJA Moyen).
 
 
 Nous appliquons ici la même méthodologie en restreignant l'analyse à la région Auvergne-Rhône-Alpes et en définissant l'offset par le logarithme du trafic moyen ($\log(\text{TMJA})$). L'intégration de cet offset et le passage à la loi Binomiale Négative améliorent drastiquement la qualité du modèle, l'AIC chutant de 11 887 à \textbf{3969}.
@@ -294,9 +294,9 @@ L'analyse des coefficients met en évidence une dualité marquée. D'une part, l
 \end{figure}
 % --------------------------------
 
-La visualisation spatiale confirme une forte concentration du volume d'accidents au sein des pôles urbains majeurs tels que Lyon et Grenoble, contrastant nettement avec les zones rurales. Alors que le modèle identifie un effet « protecteur » de la pluie lié à la prudence des usagers, cette carte rappelle que la densité du trafic en métropole reste le facteur prédominant du nombre total d'accidents, particulièrement en période nocturne.
+Comme le montre la figure 5, il y a une forte concentration du volume d'accidents au sein des pôles urbains majeurs tels que Lyon et Grenoble, contrastant nettement avec les zones rurales. Alors que le modèle identifie un effet « protecteur » de la pluie lié à la prudence des usagers, cette carte rappelle que la densité du trafic en métropole reste le facteur prédominant du nombre total d'accidents, particulièrement en période nocturne.
 
-\subsection{Limites}
+\subsection{Limites de nos modèles de fréquences}
 
 Malgré la robustesse statistique de l'approche par la loi Binomiale Négative, cette étude présente certaines limites inhérentes à la nature des données. Premièrement, le biais d'agrégation induit par le regroupement des accidents par commune lisse l'information et risque de masquer des "points noirs" très localisés, qui se retrouvent noyés dans la moyenne globale de la ville. Deuxièmement, la nature statique du TMJA constitue une approximation, car ce trafic moyen annuel ne capture pas la réalité dynamique (congestion, heures de pointe) alors que le risque diffère radicalement entre une circulation fluide et un trafic saturé. Enfin, le facteur humain reste une variable inobservée majeure ; nos modèles structurels ne contiennent aucune donnée sur l'état du conducteur (fatigue, alcoolémie, distraction), qui demeure pourtant le déterminant principal de l'accidentologie.
 
@@ -308,10 +308,6 @@ Nos résultats restent toutefois conditionnés par plusieurs limites techniques 
 \newpage % Force une nouvelle page
 \phantomsection % Astuce pour que le lien dans la table des matières pointe bien ici
 \addcontentsline{toc}{section}{Références} % Ajoute "Références" à la table des matières
-
-\newpage
-\phantomsection
-\addcontentsline{toc}{section}{Références}
 
 \begin{thebibliography}{9}
 
