@@ -81,7 +81,7 @@ Notre définition du Score de Sévérité est une pondération du nombre de pers
 \[
     Score\_Severite = \alpha \times nb\_Tue + \beta \times nb\_Hospitalise + \gamma \times nb\_Blesse + \delta \times nb\_Indemne.
 \]
-Avec $\alpha$, $\beta$, $\gamma$, $\delta$ des coefficients choisis de manière à refléter la gravité relative des blessures. Pour ce faire, nous nous sommes inspiré de l'échelle AIS (Abbreviated Injury Scale) qui quantifie la gravité des lésions. On obtient ainsi: $\alpha = 6$, $\beta = 3$, $\gamma = 1$, $\delta = 0$. Ces coefficients attribuent un poids 6 fois plus important aux décès qu'aux blessés légers, et 3 fois plus aux blessés hospitalisés. Nous considérons que le nombre de personnes indemne ne doit pas avoir d'influence sur ce score car selon nous, son nombre n'est pas lié à la sévérité d'un accident.
+Avec $\alpha$, $\beta$, $\gamma$, $\delta$ des coefficients choisis de manière à refléter la gravité relative des blessures. Pour ce faire, nous nous sommes inspiré de l'échelle AIS (Abbreviated Injury Scale) qui quantifie la gravité des lésions. On obtient ainsi: $\alpha = 6$, $\beta = 3$, $\gamma = 1$, $\delta = 0$. Ces coefficients attribuent un poids 6 fois plus important aux décès qu'aux blessés légers, et 3 fois plus aux blessés hospitalisés. Nous considérons que le nombre de personnes indemne ne doit pas avoir d'influence sur ce score car selon nous, son nombre n'est pas lié à la sévérité d'un accident. \\
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.75\linewidth]{pie_plot_sans_titre.png}
