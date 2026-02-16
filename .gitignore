@@ -14,3 +14,9 @@
 
 *.log
 *.gitkeep
+
+.DS_Store
+.Rproj.user
+.Rhistory
+.RData
+*.odt

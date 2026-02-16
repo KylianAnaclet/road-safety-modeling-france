@@ -1,97 +1,62 @@
-# Projet Math-Appli 1A – Modélisation des accidents routiers en France
-Ce projet vise à **modéliser la sévérité et la fréquence des accidents routiers en France**
-à partir des données ONISR 2021.  
-Trois approches statistiques sont mises en œuvre :
+# FRENCH ROAD ACCIDENT ANALYSIS (2021)
 
-1. Modèle linéaire  
-2. Méthode de partitionnement (clustering)  
-3. Modèle de fréquence  
+Statistical modeling of road accident severity and frequency in France based on ONISR data.
 
----
+![R](https://img.shields.io/badge/Language-R-blue)
+![Analysis](https://img.shields.io/badge/Analysis-GLM%20%26%20Clustering-orange)
+![Report](https://img.shields.io/badge/Report-LaTeX-green)
 
-## Table des matières
+## OVERVIEW
+This project applies advanced statistical methods to analyze road safety data from 2021. The goal is to identify risk factors and model accident occurrences using three complementary approaches:
 
-- [Arborescence du projet](#arborescence-du-projet)  
-- [Étape 1 : Exportation des données](#étape-1--exportation-des-données)  
-- [Étape 2 : Modèle linéaire](#étape-2--modèle-linéaire)  
-- [Étape 3 : Méthode de partitionnement (clustering)](#étape-3--méthode-de-partitionnement-clustering)  
-- [Étape 4 : Modèle de fréquence](#étape-4--modèle-de-fréquence)  
+1. Linear Regression: Modeling the severity score of accidents based on location, vehicle type, and user characteristics.
+2. Unsupervised Learning (Clustering): Identifying typical accident profiles and typologies.
+3. Frequency Modeling: Analyzing accident counts at departmental and regional scales using Poisson and Negative Binomial regression (with population and traffic offsets).
 
----
+## PROJECT STRUCTURE
 
-## Arborescence du projet
+- data/ : Raw datasets (ONISR 2021, INSEE, TMJA)
+- Regression_lineaire/ : Severity score modeling (RMarkdown & PDF)
+- clustering/ : K-Means/HCA implementation to find profiles
+- frequence/ : Count data modeling (Poisson/NegBin)
+- rapport/ : Final detailed report (LaTeX source & PDF)
+- Figures/ : Generated plots and graphs
 
-- `description/`  
-  - `sujet*.md` : sujet du projet au format Markdown  
-  - `sujet.pdf` : sujet du projet au format PDF  
+## METHODOLOGY & RESULTS
 
-- `data/`  
-  - `ONISR-2021.csv.zip` : données brutes ONISR 2021  
-  - `description-des-bases-de-donnees-annuelles.pdf` : description des variables  
+### 1. Linear Regression (Severity)
+Objective: Construct a severity score and explain it using explanatory variables.
+File: Regression_lineaire/reg_lineaire2.pdf
 
-- `Regression_linéaire/`  
-  - `reg_lineaire2.Rmd` : implémentation du modèle linéaire  
-  - `reg_lineaire2.pdf` : résultats du modèle linéaire  
+### 2. Clustering (Typology)
+Objective: Group accidents by similarity to detect patterns.
+Method: Data preparation and partitioning.
+File: clustering/clustering.pdf
 
-- `clustering/`  
-  - `nettoyage_donnees_clustering.Rmd` : préparation des données  
-  - `clustering.Rmd` : implémentation de la méthode de partitionnement  
-  - `clustering.pdf` : résultats du clustering  
+### 3. Frequency Modeling (Risk Factors)
+Objective: Model the number of accidents independently of traffic volume.
+Approaches:
+- Generalist: Country-wide scale (Offset: Population).
+- Precision: Regional scale (Auvergne-Rhône-Alpes) using TMJA (Annual Average Daily Traffic) as offset.
+File: Frequence/Frequence.pdf
 
-- `frequence/`  
-  - `Frequence.Rmd` : Implémentation du modèle de fréquence "approche généraliste" (France entière, échelle départementale, offset : Population).  
-  - `Frequence.pdf` : Résultats générés à partir de Frequence.Rmd.
-  - `donnees_departements_INSEE_2021.csv` : Données de population par département en 2021 (Source : INSEE).
-  
-  - `Frequence_TMJA.Rmd` : Implémentation du modèle de fréquence "approche précision" (Région Auvergne-Rhône-Alpes, échelle communale, offset : TMJA).
-  - `Frequence_TMJA.pdf` : Résultats générés à partir de Frequence_TMJA.Rmd.
-  - `tmja_2021_intranet.xls` : Données du Trafic Moyen Journalier Annuel 2021 (Source : TMJA Gouv).
-- `rapport/`  
-  - `rapport.tex` : rapport collectif  
+## GETTING STARTED
 
-- `README.md` : ce fichier  
+To reproduce the analysis, you will need R and RStudio.
 
----
+1. Clone the repository:
+   git clone https://github.com/KylianAnaclet/road-safety-modeling-france.git
 
-## Étape 1 : Exportation des données
+2. Data Setup:
+   Unzip the file 'ONISR-2021.csv.zip' located inside the 'data/' folder.
 
-1. Décompresser le fichier `ONISR-2021.csv.zip` situé dans le dossier `data/`.  
-2. Vérifier que le fichier CSV extrait se trouve bien dans le dossier `data/`.  
+3. Run Analysis:
+   Open any .Rmd file in RStudio and click "Knit" to generate the reports.
 
----
+## AUTHORS
+Project realized for the Applied Mathematics curriculum.
 
-## Étape 2 : Modèle linéaire
-Fichier qui présente la construction du score de sévérité et l'élaboration de 3 modèles de régression linéaire. Ces modèles cherchent à expliquer ce score en fonction de variables telles que les caractéristiques de l'accident, le lieu, les véhicules et les usagers impliqués. 
-
-**Instructions :**
-
-1. Lancer Rstudio et exécuter `reg_lineaire2.Rmd` pour exécuter le code cellule après cellule et suivre la trame du fichier
-2. Sinon, ouvrir directement  `reg_lineaire2.pdf` pour obtenir le fichier `reg_lineaire2.Rmd` compilé
-
----
-
-## Étape 3 : Méthode de partitionnement (clustering)
-
-Le clustering permet de **regrouper les accidents selon des caractéristiques similaires**
-afin d’identifier des profils types d’accidents.
-
-**Instructions :**
-1. Ouvrir directement  `clustering.pdf` pour obtenir le fichier `clustering.Rmd` compilé.
-2. Sinon, lancer RStudio et se placer dans le dossier `clustering/`.  
-3. Exécuter le script `nettoyage_donnees_clustering.Rmd` pour préparer les données.  
-4. Vérifier que le fichier `donnees_clustering.csv` est bien généré dans le dossier `data/`.  
-5. Ouvrir `clustering.Rmd` et exécuter toutes les cellules pour appliquer la méthode de partitionnement.
-
----
-
-## Étape 4 : Modèle de fréquence
-
-Cette partie modélise le nombre d'accidents afin d'identifier les facteurs de risque structurels, indépendamment du volume de trafic. Pour cela, deux types d'exposition (offsets) sont utilisés : la population (approche généraliste) et le TMJA (approche précision). Une analyse comparative quantitative et qualitative est réalisée entre le modèle de Poisson et la Binomiale Négative (gestion de la surdispersion).
-
-**Instructions :**
-
-1. Lancer Rstudio et se placer dans le dossier `frequence/`
-2. S'assurer que  `donnees_departements_INSEE_2021.csv` et `tmja_2021_intranet.xls`  sont bel et  bien dans le dossier `frequence\`
-3. Exécuter le script `Frequence.Rmd` pour avoir le résultat à l'échelle départementale.
-4. Exécuter le script `Frequence_TMJA.Rmd`pour voir les résultats à une échelle régionale.
-
+- Kylian Anaclet
+- Ilyes Kebairi
+- Muhamad Zaiinizee Bin Davin
+- Younes Chennouf

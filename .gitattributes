@@ -1,0 +1,5 @@
+# Ignorer LaTeX dans les stats
+*.tex linguist-vendored
+report/* linguist-vendored
+rapport/* linguist-vendored
+*.pdf linguist-vendored
