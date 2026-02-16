@@ -1,5 +1,8 @@
 # FRENCH ROAD ACCIDENT ANALYSIS (2021)
 
+![Spatial Analysis of Road Accidents](Figures/Carte_frequence.png)
+Map displaying accident concentration in urban areas and the aggravating impact of night-time conditions, confirmed by statistical modeling.
+
 ### 📄 [Read Full Report (PDF)](rapport/Rapport_final.pdf)
 
 Statistical modeling of road accident severity and frequency in France based on ONISR data.
