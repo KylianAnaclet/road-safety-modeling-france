@@ -1,5 +1,11 @@
-# Ignorer LaTeX dans les stats
-*.tex linguist-vendored
-report/* linguist-vendored
-rapport/* linguist-vendored
-*.pdf linguist-vendored
+# Ignorer complètement les fichiers TeX et PDF
+*.tex linguist-detectable=false
+*.pdf linguist-detectable=false
+
+# Ignorer tout le contenu des dossiers de rapport
+report/* linguist-detectable=false
+rapport/* linguist-detectable=false
+
+# Forcer les fichiers Rmd à compter comme du R (très important)
+*.Rmd linguist-language=R
+*.rmd linguist-language=R
