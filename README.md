@@ -1,5 +1,7 @@
 # FRENCH ROAD ACCIDENT ANALYSIS (2021)
 
+### 📄 [Lire le Rapport Complet (PDF)](report/rapport.pdf)
+
 Statistical modeling of road accident severity and frequency in France based on ONISR data.
 
 ## OVERVIEW
