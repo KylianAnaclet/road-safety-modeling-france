@@ -57,6 +57,6 @@ To reproduce the analysis, you will need R and RStudio.
 Project realized for the Applied Mathematics curriculum.
 
 - * **Kylian Anaclet** - [KylianAnaclet](https://github.com/KylianAnaclet)
-- * **Ilyes ** - 
+- * **Ilyes** - 
 - * **Muhamad Zaiinizee Bin David** - [bindaivm](https://github.com/bindaivm)
 - * **Younes Chennouf** - 
