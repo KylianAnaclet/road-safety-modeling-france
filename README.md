@@ -56,7 +56,7 @@ To reproduce the analysis, you will need R and RStudio.
 ## AUTHORS
 Project realized for the Applied Mathematics curriculum.
 
-- Kylian Anaclet
-- Ilyes Kebairi
-- Muhamad Zaiinizee Bin Davin
-- Younes Chennouf
+- * **Kylian Anaclet** - [KylianAnaclet](https://github.com/KylianAnaclet)
+- * **Ilyes ** - 
+- * **Muhamad Zaiinizee Bin David** - [bindaivm](https://github.com/bindaivm)
+- * **Younes Chennouf** - 
