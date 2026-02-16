@@ -26,7 +26,7 @@ This project applies advanced statistical methods to analyze road safety data fr
 
 ### 1. Linear Regression (Severity)
 Objective: Construct a severity score and explain it using explanatory variables.
-File: linear_regression/reg_lineaire2.pdf
+File: Regression_lineaire/reg_lineaire2.pdf
 
 ### 2. Clustering (Typology)
 Objective: Group accidents by similarity to detect patterns.
@@ -38,7 +38,7 @@ Objective: Model the number of accidents independently of traffic volume.
 Approaches:
 - Generalist: Country-wide scale (Offset: Population).
 - Precision: Regional scale (Auvergne-Rhône-Alpes) using TMJA (Annual Average Daily Traffic) as offset.
-File: frequency_analysis/Frequence.pdf
+File: Frequence/Frequence.pdf
 
 ## GETTING STARTED
 
