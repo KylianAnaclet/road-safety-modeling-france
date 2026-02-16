@@ -2,7 +2,7 @@
 
 Statistical modeling of road accident severity and frequency in France based on ONISR data.
 
-![R](https://img.shields.io/badge/Language-R-blue)
+![R](https://img.shields.io/badge/Language-R-yellow)
 ![Analysis](https://img.shields.io/badge/Analysis-GLM%20%26%20Clustering-orange)
 ![Report](https://img.shields.io/badge/Report-LaTeX-green)
 
