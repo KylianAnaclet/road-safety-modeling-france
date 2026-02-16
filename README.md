@@ -45,7 +45,7 @@ File: frequency_analysis/Frequence.pdf
 To reproduce the analysis, you will need R and RStudio.
 
 1. Clone the repository:
-   git clone https://github.com/ton-pseudo/road-safety-modeling-france.git
+   git clone https://github.com/KylianAnaclet/road-safety-modeling-france.git
 
 2. Data Setup:
    Unzip the file 'ONISR-2021.csv.zip' located inside the 'data/' folder.
@@ -56,7 +56,7 @@ To reproduce the analysis, you will need R and RStudio.
 ## AUTHORS
 Project realized for the Applied Mathematics curriculum.
 
-- [Ton Prénom Nom]
-- [Prénom Nom Binôme 1]
-- [Prénom Nom Binôme 2]
-- [Prénom Nom Binôme 3]
+- Kylian Anaclet
+- Ilyes Kebairi
+- Muhamad Zaiinizee Bin Davin
+- Younes Chennouf
