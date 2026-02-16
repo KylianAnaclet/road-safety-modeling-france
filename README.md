@@ -16,11 +16,11 @@ This project applies advanced statistical methods to analyze road safety data fr
 ## PROJECT STRUCTURE
 
 - data/ : Raw datasets (ONISR 2021, INSEE, TMJA)
-- linear_regression/ : Severity score modeling (RMarkdown & PDF)
+- Regression_lineaire/ : Severity score modeling (RMarkdown & PDF)
 - clustering/ : K-Means/HCA implementation to find profiles
-- frequency_analysis/ : Count data modeling (Poisson/NegBin)
-- report/ : Final detailed report (LaTeX source & PDF)
-- figures/ : Generated plots and graphs
+- Frequences/ : Count data modeling (Poisson/NegBin)
+- rapport/ : Final detailed report (LaTeX source & PDF)
+- Figures/ : Generated plots and graphs
 
 ## METHODOLOGY & RESULTS
 
